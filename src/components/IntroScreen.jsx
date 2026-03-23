@@ -120,16 +120,44 @@ const Highlight = ({ children, color = "#FFF176", rotate = "-0.5deg" }) => (
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-const HOW_IT_WORKS = [
-  { e: "🗓️", k: "Calendar", v: "7 weeks total, 4 steps per week" },
-  { e: "💬", k: "Message",  v: "say something to the group" },
-  { e: "📅", k: "Poll",     v: "propose dates" },
-  { e: "🔔", k: "Nudge",    v: "guilt trip the ones gone quiet" },
-  { e: "⏰", k: "Deadline", v: "'respond by Sunday or else'" },
-  { e: "📍", k: "Pin",      v: "suggest a location" },
-  { e: "🤫", k: "DM",       v: "private message directly" },
-  { e: "🔒", k: "Lock In",  v: "when you think you've got them all" },
+const HOW_CLOCK = { e: "🗓️", k: "Clock", v: "7 weeks total — 4 steps per week" };
+
+const HOW_GROUPS = [
+  {
+    hint: "what you'll use most",
+    items: [{ e: "💬", k: "Message", v: "talk to the whole group" }],
+  },
+  {
+    hint: "poll, place, slide into DMs",
+    items: [
+      { e: "📅", k: "Poll", v: "pick dates together" },
+      { e: "📍", k: "Pin", v: "drop a venue" },
+      { e: "🤫", k: "DM", v: "message one person privately" },
+    ],
+  },
+  {
+    hint: "one tap per game — use them wisely",
+    items: [
+      { e: "🔔", k: "Nudge", v: "poke who have gone quiet" },
+      { e: "⏰", k: "Deadline", v: "end-of-week ultimatum" },
+    ],
+  },
 ];
+
+const HOW_LOCK = { e: "🔒", k: "Lock in", v: "when you think you've got them all" };
+
+/** Flat rows (clock → tools → lock) for simple `.map` layouts. */
+const HOW_IT_WORKS = [HOW_CLOCK, ...HOW_GROUPS.flatMap((g) => g.items), HOW_LOCK];
+
+function HowRow({ e, k, v }) {
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 8, whiteSpace: "nowrap" }}>
+      <span style={{ fontSize: 12, flexShrink: 0, width: 16 }}>{e}</span>
+      <span className="mansalva" style={{ color: "#2a2a2a", fontSize: 14, flexShrink: 0, minWidth: 72 }}>{k}</span>
+      <span style={{ color: "#7a6f64", fontSize: 11, ...nunito(400), overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
+    </div>
+  );
+}
 
 const STAT_COLORS = ["#25D366", "#FFB830", "#8696A0"];
 
@@ -337,14 +365,17 @@ export function IntroScreen({ onStart, occasionOverride = null }) {
             </span>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {HOW_IT_WORKS.map(({ e, k, v }) => (
-              <div key={k} style={{ display: "flex", alignItems: "baseline", gap: 8, whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 12, flexShrink: 0, width: 16 }}>{e}</span>
-                <span className="mansalva" style={{ color: "#2a2a2a", fontSize: 14, flexShrink: 0, minWidth: 72 }}>{k}</span>
-                <span style={{ color: "#7a6f64", fontSize: 11, ...nunito(400), overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <HowRow {...HOW_CLOCK} />
+            {HOW_GROUPS.map((tier) => (
+              <div key={tier.hint} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <span className="mansalva" style={{ fontSize: 11, color: "#a0988c" }}>{tier.hint}</span>
+                {tier.items.map((row) => (
+                  <HowRow key={`${tier.hint}-${row.k}`} {...row} />
+                ))}
               </div>
             ))}
+            <HowRow {...HOW_LOCK} />
           </div>
 
         </div>

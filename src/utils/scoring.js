@@ -1,3 +1,17 @@
+/**
+ * When the player locks in, people who were "maybe" finally commit or don't.
+ * Only `maybe` rows change; everything else is left as-is for scoring.
+ */
+export function resolveCommitmentsAtLockIn(chars) {
+  return chars.map((c) => {
+    if (c.commitment !== "maybe") return c;
+    const r = Math.random();
+    if (r < 0.38) return { ...c, commitment: "yes" };
+    if (r < 0.72) return { ...c, commitment: "no" };
+    return { ...c, commitment: "maybe" };
+  });
+}
+
 export function buildResult({ occ, confirmed, steps, personalBest }) {
   const count = confirmed.length;
   const { min, max, target } = occ;

@@ -1,5 +1,38 @@
+import { DM_IGNORE_UNTIL_WEEKS_ELAPSED } from "../data/characters.js";
+
 export function buildSys(occ, chars, opts = {}) {
-  const { mode, dates } = opts;
+  const { mode, dates, weeksLeft, totalWeeks = 7 } = opts;
+  const wl = weeksLeft ?? totalWeeks;
+  const weeksElapsed = totalWeeks - wl;
+  const dmStillGhostIds = chars
+    .filter((c) => c.ignoresDm && weeksElapsed < DM_IGNORE_UNTIL_WEEKS_ELAPSED)
+    .map((c) => c.id)
+    .join(", ");
+
+  const ghostOrSeenIds = chars
+    .filter((c) => c.commitment === "ghost" || c.commitment === "seen")
+    .map((c) => `${c.name} id:${c.id}`)
+    .join(" | ");
+
+  const nudgeExtra =
+    mode === "nudge"
+      ? `
+NUDGE (hard requirements):
+- Return at least 3 character responses (not 1–2).
+- If anyone is ghost or seen, at least TWO of your responses must be from those ids: ${ghostOrSeenIds || "(none listed — then guilt-trip 3+ random members anyway)"}.
+- Those repliers use sheepish / "sorry yeah I saw" / "been manic" energy — REACT-TO-PLAYER beat mandatory for them.
+- Others can pile on with mild embarrassment or fake enthusiasm.`
+      : "";
+
+  const deadlineExtra =
+    mode === "deadline"
+      ? `
+DEADLINE (hard requirements):
+- Return at least 4 character responses.
+- At least THREE must show a DIFFERENT commitment string than their "Commitment:" line above (yes→maybe, maybe→yes, maybe→no, ghost→maybe, etc.). No fake variety — actually change the JSON commitment field.
+- Mix: some panic-commit, some hard bail ("can't do it"), one person ignores the deadline entirely (omit them from responses).
+- NarratorComment should mention time running out or denial.`
+      : "";
   const fingerprints = {
     tom: `MAX 6 words per message. No punctuation except "." at end sometimes. No emoji ever. Dry, flat.
 NEVER starts with a name or greeting. Examples: "yeah maybe" / "dunno yet" / "could do."`,
@@ -59,10 +92,15 @@ ${chars.map((c) => {
 ━━ PLAYER ACTIONS ━━
 message   → 1–2 characters reply. Not everyone. Silence is realistic.
 poll      → characters react to specific dates. Some clash, some are suspiciously free. CRITICAL: their message text must match their pollVotes exactly — if they say "Saturday works", pollVotes must include that Saturday.
-nudge     → guilty resurfacing. Sheepish energy only.
-deadline  → some mild panic, some total ignore. Max 2 respond.
+nudge     → see NUDGE block below (minimum replies + quiet people must resurface).
+deadline  → see DEADLINE block below (minimum replies + forced commitment shifts).
 pin       → location makes it real. At least one "oh wait this is actually happening" reaction.
-dm        → ONLY the targeted character replies. Nobody else. More candid in private.
+dm        → ONLY the targeted character may appear in "responses" — max one entry, characterId must match the DM target. Nobody else. More candid in private.
+            DM GHOSTING — in-game time: ${weeksElapsed} week(s) elapsed, ${wl} week(s) left in the countdown.
+            Exactly ONE cast member may be a "DM ghost" (their id is listed here while ghosting): ${dmStillGhostIds || "(none — no DM ghost or they now answer DMs)"}.
+            If the DM target is that ghost before week ${DM_IGNORE_UNTIL_WEEKS_ELAPSED}, return "responses": [] and a dry narratorComment (radio silence / blue ticks).
+            After the threshold they reply normally; they may acknowledge the delay.
+${nudgeExtra}${deadlineExtra}
 
 ${BEATS}
 

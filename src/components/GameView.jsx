@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState } from "react";
 import { ChatMsg } from "./ChatMsg.jsx";
-import { CD } from "../data/commitmentDisplay.js";
 
 const WA_GREEN    = "#25D366";
 const WA_HEADER   = "#075E54";
@@ -9,13 +8,15 @@ const WA_SENT     = "#DCF8C6";
 const WA_SENT_TXT = "#111";
 const WA_BG       = "#E5DDD5";
 
-const ACTIONS = [
-  { id: "message",  l: "💬 Message"  },
-  { id: "poll",     l: "📅 Poll"     },
-  { id: "nudge",    l: "🔔 Nudge"    },
+const TIER_PRIMARY = [{ id: "message", l: "💬 Message" }];
+const TIER_SECONDARY = [
+  { id: "poll", l: "📅 Poll" },
+  { id: "pin", l: "📍 Pin" },
+  { id: "dm", l: "🤫 DM" },
+];
+const TIER_LAST = [
+  { id: "nudge", l: "🔔 Nudge" },
   { id: "deadline", l: "⏰ Deadline" },
-  { id: "pin",      l: "📍 Pin"      },
-  { id: "dm",       l: "🤫 DM"       },
 ];
 
 /* ── tiny icon helpers ── */
@@ -47,6 +48,9 @@ export function GameView({
   loading,
   narrator,
   mode,
+  deadlineActive,
+  nudgeUsed,
+  deadlineUsed,
   pinSuggestions,
   pollDates,
   dmTarget,
@@ -80,14 +84,32 @@ export function GameView({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs]);
 
-  const handleModeClick = (id) => {
+  const handleModeClick = (id, disabled) => {
+    if (disabled) return;
     onModeChange(id);
     if (id === "pin") onInputChange(occ?.venue || "");
     else if (id !== "dm") onInputChange("");
   };
 
+  const chipStyle = (active, disabled, primary) => ({
+    background: disabled ? "#E9EDEF" : active ? WA_TEAL : "#fff",
+    color: disabled ? "#B0B8BC" : active ? "#fff" : "#54656F",
+    border: active ? "none" : "1px solid #D9DEE3",
+    borderRadius: primary ? 22 : 20,
+    padding: primary ? "8px 18px" : "5px 13px",
+    fontSize: primary ? 13.5 : 12.5,
+    fontWeight: active || primary ? 600 : 400,
+    cursor: disabled ? "not-allowed" : "pointer",
+    whiteSpace: "nowrap",
+    transition: "all 0.15s",
+    flexShrink: 0,
+    boxShadow: active && !disabled ? "0 1px 4px rgba(18,140,126,0.3)" : "none",
+    opacity: disabled ? 0.72 : 1,
+  });
+
   const participantLine = chars.map((c) => c.name).join(", ");
   const hasPollDate = Array.isArray(pollDates) && pollDates.some(Boolean);
+  const nudgeTargets = chars.filter((c) => ["ghost", "unknown", "seen"].includes(c.commitment));
 
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", background: WA_BG }}>
@@ -199,33 +221,52 @@ export function GameView({
           </div>
         )}
 
-        {/* ── Action chips ── */}
+        {/* ── Action chips (one row, tier order preserved) ── */}
         <div style={{
           background: "#F0F2F5",
           borderTop: "1px solid rgba(0,0,0,0.08)",
-          padding: "6px 10px",
-          display: "flex", gap: 6, overflowX: "auto", flexShrink: 0,
+          padding: "8px 10px",
+          display: "flex", alignItems: "center", gap: 6,
+          overflowX: "auto",
+          flexShrink: 0,
+          WebkitOverflowScrolling: "touch",
         }}>
-          {ACTIONS.map((a) => {
+          {TIER_PRIMARY.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => handleModeClick(a.id, false)}
+              style={chipStyle(mode === a.id, false, true)}
+            >
+              {a.l}
+            </button>
+          ))}
+          <span style={{ width: 1, height: 22, background: "#D9DEE3", flexShrink: 0, margin: "0 2px" }} aria-hidden />
+          {TIER_SECONDARY.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => handleModeClick(a.id, false)}
+              style={chipStyle(mode === a.id, false, false)}
+            >
+              {a.l}
+            </button>
+          ))}
+          <span style={{ width: 1, height: 22, background: "#D9DEE3", flexShrink: 0, margin: "0 2px" }} aria-hidden />
+          {TIER_LAST.map((a) => {
+            const disabled =
+              a.id === "nudge"
+                ? nudgeUsed
+                : deadlineUsed || deadlineActive;
             const active = mode === a.id;
             return (
               <button
                 key={a.id}
-                onClick={() => handleModeClick(a.id)}
-                style={{
-                  background: active ? WA_TEAL : "#fff",
-                  color: active ? "#fff" : "#54656F",
-                  border: active ? "none" : "1px solid #D9DEE3",
-                  borderRadius: 20,
-                  padding: "5px 13px",
-                  fontSize: 12.5,
-                  fontWeight: active ? 600 : 400,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  transition: "all 0.15s",
-                  flexShrink: 0,
-                  boxShadow: active ? "0 1px 4px rgba(18,140,126,0.3)" : "none",
-                }}
+                type="button"
+                title={a.id === "nudge" || a.id === "deadline" ? "One use per game" : undefined}
+                disabled={disabled}
+                onClick={() => handleModeClick(a.id, disabled)}
+                style={chipStyle(active, disabled, false)}
               >
                 {a.l}
               </button>
@@ -247,7 +288,46 @@ export function GameView({
 
           {/* Input area */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            {mode === "poll" ? (
+            {mode === "nudge" ? (
+              <div style={{
+                background: "#fff", borderRadius: 24, padding: "11px 16px",
+                display: "flex", alignItems: "center", gap: 8, opacity: loading ? 0.7 : 1,
+              }}>
+                {nudgeTargets.length > 0 ? (
+                  <>
+                    <span style={{ fontSize: 14, color: "#8696A0" }}>Poking</span>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", flex: 1 }}>
+                      {nudgeTargets.map((c) => (
+                        <span key={c.id} style={{
+                          background: "#F0F2F5", borderRadius: 12,
+                          padding: "2px 8px", fontSize: 12.5, color: "#111",
+                        }}>
+                          {c.avatar} {c.name}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 13, color: "#8696A0" }}>Everyone has already responded.</span>
+                )}
+              </div>
+            ) : mode === "deadline" ? (
+              <div style={{
+                background: deadlineActive ? "#F0F2F5" : "#fff",
+                borderRadius: 24, padding: "11px 16px",
+                opacity: loading ? 0.7 : 1,
+              }}>
+                {deadlineActive ? (
+                  <span style={{ fontSize: 13, color: "#8696A0" }}>
+                    ⏰ Deadline already set for this week — waiting on replies.
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 13, color: "#54656F" }}>
+                    ⏰ Sends an ultimatum — anyone who hasn&apos;t replied by next week gets dropped.
+                  </span>
+                )}
+              </div>
+            ) : mode === "poll" ? (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                 {[0, 1, 2].map((idx) => (
                   <input
@@ -362,12 +442,7 @@ export function GameView({
                 onChange={(e) => onInputChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
                 disabled={loading}
-                placeholder={
-                  mode === "nudge"    ? "Guilt them gently..." :
-                  mode === "deadline" ? "Set your deadline..." :
-                  mode === "pin"      ? occ?.venue || "Location..." :
-                  "Message"
-                }
+                placeholder={mode === "pin" ? occ?.venue || "Location..." : "Message"}
                 style={{
                   width: "100%", background: "#fff", border: "none",
                   borderRadius: 24, padding: "11px 16px",
@@ -379,31 +454,49 @@ export function GameView({
           </div>
 
           {/* Mic shown when input is empty — decorative only */}
-          {!input.trim() && !loading && mode !== "poll" && (
+          {!input.trim() && !loading && mode !== "poll" && mode !== "nudge" && mode !== "deadline" && (
             <div style={{ color: "#C4CCD1", display: "flex", alignItems: "center", flexShrink: 0, padding: 4, pointerEvents: "none" }}>
               <AttachIcon />
             </div>
           )}
 
           {/* Send button — only shown when there's something to send */}
-          <button
-            onClick={onSend}
-            disabled={loading || (mode === "poll" ? !hasPollDate : !input.trim())}
-            style={{
-              background: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? WA_GREEN : "#E9EDEF",
-              border: "none", borderRadius: "50%",
-              width: 46, height: 46,
-              cursor: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? "pointer" : "default",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-              color: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? "#fff" : "#C4CCD1",
-              transition: "background 0.15s, color 0.15s",
-              boxShadow: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? "0 1px 4px rgba(37,211,102,0.4)" : "none",
-            }}
-            aria-label="Send"
-          >
-            {loading ? <span style={{ fontSize: 18 }}>⏳</span> : input.trim() || (mode === "poll" && hasPollDate) ? <SendIcon /> : <MicIcon />}
-          </button>
+          {(() => {
+            const canSend =
+              !loading && (
+                mode === "nudge" ? nudgeTargets.length > 0 && !nudgeUsed :
+                mode === "deadline" ? !deadlineActive && !deadlineUsed :
+                mode === "poll" ? hasPollDate :
+                Boolean(input.trim())
+              );
+            const isDisabled =
+              loading || (
+                mode === "nudge" ? nudgeTargets.length === 0 || nudgeUsed :
+                mode === "deadline" ? deadlineActive || deadlineUsed :
+                mode === "poll" ? !hasPollDate :
+                !input.trim()
+              );
+            return (
+              <button
+                onClick={onSend}
+                disabled={isDisabled}
+                style={{
+                  background: canSend ? WA_GREEN : "#E9EDEF",
+                  border: "none", borderRadius: "50%",
+                  width: 46, height: 46,
+                  cursor: canSend ? "pointer" : "default",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                  color: canSend ? "#fff" : "#C4CCD1",
+                  transition: "background 0.15s, color 0.15s",
+                  boxShadow: canSend ? "0 1px 4px rgba(37,211,102,0.4)" : "none",
+                }}
+                aria-label="Send"
+              >
+                {loading ? <span style={{ fontSize: 18 }}>⏳</span> : canSend ? <SendIcon /> : <MicIcon />}
+              </button>
+            );
+          })()}
         </div>
       </div>
 
@@ -472,7 +565,7 @@ export function GameView({
               </span>
               <span style={{ color: "#8696A0", fontSize: 15 }}>/ {occ.target}</span>
             </div>
-            <div style={{ color: "#667781", fontSize: 11, textAlign: "center", marginBottom: 8 }}>confirmed</div>
+            <div style={{ color: "#667781", fontSize: 11, textAlign: "center", marginBottom: 8 }}>said they&apos;re in (theoretically)</div>
             <div style={{ background: "#D9DEE3", borderRadius: 4, height: 4, overflow: "hidden" }}>
               <div style={{
                 background: WA_GREEN,
@@ -503,7 +596,8 @@ export function GameView({
             {chars.length} participants
           </div>
           {chars.map((c) => {
-            const d = CD[c.commitment] || CD.unknown;
+            const seen = c.lastSeen?.trim();
+            const isOnline = seen?.toLowerCase() === "online";
             return (
               <div key={c.id} style={{
                 padding: "10px 16px",
@@ -520,9 +614,14 @@ export function GameView({
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ color: "#111", fontSize: 14, fontWeight: 500 }}>{c.name}</div>
-                  <div style={{ fontSize: 12, color: d.color, marginTop: 1 }}>{d.label}</div>
+                  <div style={{ fontSize: 12, color: "#667781", marginTop: 1 }}>
+                    {isOnline ? (
+                      <span style={{ color: WA_GREEN }}>online</span>
+                    ) : (
+                      <>last seen {seen || "recently"}</>
+                    )}
+                  </div>
                 </div>
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{d.icon}</span>
               </div>
             );
           })}

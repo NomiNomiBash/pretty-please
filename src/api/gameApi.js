@@ -34,16 +34,16 @@ export async function getTodayCast() {
   }
 }
 
-export async function sendTurn({ occ, chars, mode, dmTarget, prompt, dates }) {
+export async function sendTurn({ occ, chars, mode, dmTarget, prompt, dates, weeksLeft, totalWeeks }) {
   if (!USE_API_ROUTES) {
-    return fetchResponses({ occ, chars, mode, dmTarget, prompt, dates });
+    return fetchResponses({ occ, chars, mode, dmTarget, prompt, dates, weeksLeft, totalWeeks });
   }
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await fetch("/api/turn", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ occ, chars, mode, dmTarget, prompt, dates }),
+        body: JSON.stringify({ occ, chars, mode, dmTarget, prompt, dates, weeksLeft, totalWeeks }),
       });
       if (res.ok) return await res.json();
       if (attempt === 1) throw new Error(`turn endpoint failed: ${res.status}`);
@@ -51,7 +51,7 @@ export async function sendTurn({ occ, chars, mode, dmTarget, prompt, dates }) {
     }
   } catch (apiErr) {
     try {
-      return await fetchResponses({ occ, chars, mode, dmTarget, prompt, dates });
+      return await fetchResponses({ occ, chars, mode, dmTarget, prompt, dates, weeksLeft, totalWeeks });
     } catch (fallbackErr) {
       throw new Error(`Turn failed (${apiErr?.message || "api"} / ${fallbackErr?.message || "fallback"})`);
     }

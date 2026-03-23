@@ -14,3 +14,40 @@ export const CHARACTERS = [
   { id: "callum", lastSeen: "3 days ago", personality: "Works in TV production. Always in a shoot. Replies in voice notes that nobody listens to. Will absolutely come when the shoot wraps. The shoot never wraps. Has been in this shoot since 2023." },
   { id: "ayo", lastSeen: "today at 16:30", personality: "The connector. Knows literally everyone, beloved by all, will try to bring four people nobody else has met. Her yes means either five people showing up or complete radio silence. High variance, high reward." },
 ];
+
+/** Archetypes eligible to be this game's sole "DM ghost" (exactly one per run). */
+export const DM_GHOST_ELIGIBLE_IDS = new Set(["tom", "saskia", "hamish", "callum"]);
+
+function hashString(input) {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Picks exactly one character in `characters` to carry ignoresDm for this game.
+ * Others get ignoresDm: false. If no eligible id is in the cast, everyone is false.
+ */
+export function assignSingleDmGhost(characters, seedKey) {
+  const eligible = characters.filter((c) => DM_GHOST_ELIGIBLE_IDS.has(c.id));
+  if (eligible.length === 0) {
+    return characters.map((c) => ({ ...c, ignoresDm: false }));
+  }
+  const idx = hashString(`${seedKey}:dm-ghost`) % eligible.length;
+  const pickedId = eligible[idx].id;
+  return characters.map((c) => ({ ...c, ignoresDm: c.id === pickedId }));
+}
+
+/** In-game weeks that must elapse before the DM ghost answers DMs. */
+export const DM_IGNORE_UNTIL_WEEKS_ELAPSED = 3;
+
+export function characterGhostingDm(dmTargetId, weeksLeft, totalWeeks, castChars) {
+  const c = castChars?.find((x) => x.id === dmTargetId);
+  if (!c?.ignoresDm) return false;
+  const wl = weeksLeft ?? totalWeeks;
+  const weeksElapsed = totalWeeks - wl;
+  return weeksElapsed < DM_IGNORE_UNTIL_WEEKS_ELAPSED;
+}

@@ -12,7 +12,9 @@ export function App() {
     return (
       <IntroScreen
         occasionOverride={castData?.occasion}
-        onStart={(occasion) => game.startGame(castData?.occasion || occasion, castData?.characters || null)}
+        onStart={(occasion) =>
+          game.startGame(castData?.occasion || occasion, castData?.characters || null, castData?.date ?? null)
+        }
       />
     );
   }
@@ -39,6 +41,9 @@ export function App() {
       loading={game.loading}
       narrator={game.narrator}
       mode={game.mode}
+      deadlineActive={game.deadlineWeek !== null}
+      nudgeUsed={game.nudgeUsed}
+      deadlineUsed={game.deadlineUsed}
       pinSuggestions={game.pinSuggestions}
       pollDates={game.pollDates}
       dmTarget={game.dmTarget}
