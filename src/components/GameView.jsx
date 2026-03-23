@@ -1,16 +1,41 @@
 import { useRef, useEffect, useState } from "react";
 import { ChatMsg } from "./ChatMsg.jsx";
-import { CHARACTERS } from "../data/characters.js";
 import { CD } from "../data/commitmentDisplay.js";
 
+const WA_GREEN    = "#25D366";
+const WA_HEADER   = "#075E54";
+const WA_TEAL     = "#128C7E";
+const WA_SENT     = "#DCF8C6";
+const WA_SENT_TXT = "#111";
+const WA_BG       = "#E5DDD5";
+
 const ACTIONS = [
-  { id: "message", l: "💬 Message" },
-  { id: "poll", l: "📅 Poll" },
-  { id: "nudge", l: "🔔 Nudge" },
+  { id: "message",  l: "💬 Message"  },
+  { id: "poll",     l: "📅 Poll"     },
+  { id: "nudge",    l: "🔔 Nudge"    },
   { id: "deadline", l: "⏰ Deadline" },
-  { id: "pin", l: "📍 Pin" },
-  { id: "dm", l: "🤫 DM" },
+  { id: "pin",      l: "📍 Pin"      },
+  { id: "dm",       l: "🤫 DM"       },
 ];
+
+/* ── tiny icon helpers ── */
+const Icon = ({ d, size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d={d} />
+  </svg>
+);
+const BackIcon   = () => <Icon size={20} d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />;
+const VideoIcon  = () => <Icon size={22} d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />;
+const PhoneIcon  = () => <Icon size={20} d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />;
+const MenuIcon   = () => <Icon size={22} d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />;
+const AttachIcon = () => <Icon size={22} d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />;
+const EmojiIcon  = () => <Icon size={22} d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />;
+const MicIcon    = () => <Icon size={22} d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />;
+const SendIcon   = () => <Icon size={22} d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />;
+const CloseIcon  = () => <Icon size={18} d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />;
+
+/* ── WA wallpaper tile (SVG data URI) ── */
+const WA_TILE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Ccircle cx='50' cy='30' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Ccircle cx='30' cy='60' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Ccircle cx='70' cy='70' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Cpath d='M60 10 Q65 15 60 20 Q55 25 60 30' stroke='%23c9bfb5' stroke-width='1' fill='none' opacity='.25'/%3E%3Cpath d='M20 40 Q25 45 20 50 Q15 55 20 60' stroke='%23c9bfb5' stroke-width='1' fill='none' opacity='.25'/%3E%3C/svg%3E")`;
 
 export function GameView({
   personalBest,
@@ -18,6 +43,7 @@ export function GameView({
   chars,
   msgs,
   steps,
+  daysLeft,
   loading,
   narrator,
   mode,
@@ -37,9 +63,7 @@ export function GameView({
   const [panelOpen, setPanelOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 768px)").matches);
 
-  useEffect(() => {
-    if (isMobile) setPanelOpen(false);
-  }, [isMobile]);
+  useEffect(() => { if (isMobile) setPanelOpen(false); }, [isMobile]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
@@ -58,130 +82,266 @@ export function GameView({
     else if (id !== "dm") onInputChange("");
   };
 
+  const participantLine = chars.map((c) => c.name).join(", ");
+
   return (
-    <div style={{ display: "flex", height: "100%", background: "var(--pp-bg)", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100%", overflow: "hidden", background: WA_BG }}>
+
+      {/* ── Main chat column ── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <div style={{ background: "var(--pp-bg-panel)", padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, borderBottom: "1px solid var(--pp-border)" }}>
-          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#25D366", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{occ.emoji}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: "var(--pp-text)", fontWeight: 600, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{occ.name} Planning 🎉</div>
-            <div style={{ color: "var(--pp-text-muted)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Priya, Tom, Saskia, Marcus, Jade, Ollie, Bex, Hamish</div>
+
+        {/* ── WhatsApp-style header ── */}
+        <div style={{
+          background: WA_HEADER,
+          padding: "8px 6px 8px 4px",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          flexShrink: 0,
+          userSelect: "none",
+        }}>
+          {/* Back — decorative only */}
+          <div style={{ color: "rgba(255,255,255,0.35)", padding: "4px 2px", display: "flex", alignItems: "center", flexShrink: 0 }}>
+            <BackIcon />
           </div>
-          <button
+
+          {/* Avatar */}
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: WA_TEAL,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 20, flexShrink: 0, cursor: "pointer",
+          }}
             onClick={() => setPanelOpen((o) => !o)}
-            style={{ background: "var(--pp-bg-elevated)", border: "none", borderRadius: 8, padding: "8px 10px", cursor: "pointer", fontSize: 16, flexShrink: 0 }}
-            aria-label={panelOpen ? "Hide group" : "Show group"}
           >
-            {panelOpen ? "◀" : "👥"}
-          </button>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ background: "var(--pp-bg-elevated)", borderRadius: 10, padding: "6px 12px", textAlign: "center", minWidth: 56 }}>
-              <div className="font-bitcount font-bitcount-600" style={{ color: "var(--pp-text)", fontSize: 26, fontWeight: 600, lineHeight: 1 }}>{steps}</div>
-              <div style={{ color: "var(--pp-text-muted)", fontSize: 9, letterSpacing: "0.8px", textTransform: "uppercase", marginTop: 1 }}>steps</div>
+            {occ.emoji}
+          </div>
+
+          {/* Name + participants */}
+          <div style={{ flex: 1, minWidth: 0, cursor: "pointer", marginLeft: 8 }} onClick={() => setPanelOpen((o) => !o)}>
+            <div style={{
+              color: "#fff", fontWeight: 600, fontSize: 15,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2,
+            }}>
+              {occ.name} 🎉
             </div>
+            <div style={{
+              color: "rgba(255,255,255,0.72)", fontSize: 11.5,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1,
+            }}>
+              {participantLine}
+            </div>
+          </div>
+
+          {/* Days countdown badge */}
+          {daysLeft !== null && (
+            <div style={{
+              background: daysLeft <= 1 ? "rgba(220,80,80,0.25)" : daysLeft <= 3 ? "rgba(255,184,48,0.2)" : "rgba(255,255,255,0.12)",
+              borderRadius: 10, padding: "4px 10px",
+              textAlign: "center", flexShrink: 0,
+              transition: "background 0.4s",
+            }}>
+              <div className="font-bitcount font-bitcount-600" style={{
+                color: daysLeft <= 1 ? "#ff8080" : daysLeft <= 3 ? "#FFB830" : "#fff",
+                fontSize: 20, fontWeight: 600, lineHeight: 1,
+                transition: "color 0.4s",
+              }}>
+                {daysLeft}
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9, letterSpacing: "0.8px", textTransform: "uppercase" }}>
+                {daysLeft === 1 ? "day left" : "days"}
+              </div>
+            </div>
+          )}
+
+          {/* Steps badge */}
+          <div style={{
+            background: "rgba(255,255,255,0.12)",
+            borderRadius: 10, padding: "4px 10px",
+            textAlign: "center", flexShrink: 0, marginRight: 2,
+          }}>
+            <div className="font-bitcount font-bitcount-600" style={{ color: "#fff", fontSize: 20, fontWeight: 600, lineHeight: 1 }}>{steps}</div>
+            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9, letterSpacing: "0.8px", textTransform: "uppercase" }}>steps</div>
+          </div>
+
+          {/* Action icons — decorative chrome only */}
+          <div style={{ display: "flex", gap: 2, color: "rgba(255,255,255,0.28)", flexShrink: 0, pointerEvents: "none" }}>
+            <div style={{ padding: 6, display: "flex", alignItems: "center" }}><VideoIcon /></div>
+            <div style={{ padding: 6, display: "flex", alignItems: "center" }}><PhoneIcon /></div>
+            <div style={{ padding: 6, display: "flex", alignItems: "center" }}><MenuIcon /></div>
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", background: "var(--pp-bg-page)", backgroundImage: "radial-gradient(circle at 15% 25%,rgba(37,211,102,0.04) 0%,transparent 55%)" }}>
-          {msgs.map((m) => (
-            <ChatMsg key={m.id} msg={m} />
-          ))}
-          {loading && (
-            <div style={{ textAlign: "center", padding: "8px 0" }}>
-              <span style={{ color: "var(--pp-text-muted)", fontSize: 11 }}>someone is typing...</span>
-            </div>
-          )}
+        {/* ── Chat area ── */}
+        <div style={{
+          flex: 1, overflowY: "auto",
+          padding: "10px 12px",
+          background: WA_BG,
+          backgroundImage: WA_TILE,
+        }}>
+          {msgs.map((m) => <ChatMsg key={m.id} msg={m} />)}
           <div ref={endRef} />
         </div>
 
+        {/* ── Narrator bar ── */}
         {narrator && (
-          <div style={{ background: "var(--pp-system-msg)", borderTop: "1px solid var(--pp-border)", padding: "5px 16px", textAlign: "center", flexShrink: 0 }}>
-            <span style={{ color: "var(--pp-text-muted)", fontSize: 12, fontStyle: "italic" }}>💬 {narrator}</span>
+          <div style={{
+            background: "rgba(255,255,255,0.85)",
+            borderTop: "1px solid rgba(0,0,0,0.07)",
+            padding: "5px 16px", textAlign: "center", flexShrink: 0,
+          }}>
+            <span style={{ color: "#667781", fontSize: 11.5, fontStyle: "italic" }}>💬 {narrator}</span>
           </div>
         )}
 
-        <div style={{ background: "var(--pp-bg-panel)", borderTop: "1px solid var(--pp-border)", padding: "7px 14px", display: "flex", gap: 6, overflowX: "auto", flexShrink: 0 }}>
-          {ACTIONS.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => handleModeClick(a.id)}
-              style={{
-                background: mode === a.id ? "#25D366" : "var(--pp-bg-elevated)",
-                color: mode === a.id ? "#003d20" : "var(--pp-text-muted)",
-                border: "none",
-                borderRadius: 20,
-                padding: "6px 13px",
-                fontSize: 12,
-                fontWeight: mode === a.id ? 700 : 400,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s",
-              }}
-            >
-              {a.l}
-            </button>
-          ))}
+        {/* ── Action chips ── */}
+        <div style={{
+          background: "#F0F2F5",
+          borderTop: "1px solid rgba(0,0,0,0.08)",
+          padding: "6px 10px",
+          display: "flex", gap: 6, overflowX: "auto", flexShrink: 0,
+        }}>
+          {ACTIONS.map((a) => {
+            const active = mode === a.id;
+            return (
+              <button
+                key={a.id}
+                onClick={() => handleModeClick(a.id)}
+                style={{
+                  background: active ? WA_TEAL : "#fff",
+                  color: active ? "#fff" : "#54656F",
+                  border: active ? "none" : "1px solid #D9DEE3",
+                  borderRadius: 20,
+                  padding: "5px 13px",
+                  fontSize: 12.5,
+                  fontWeight: active ? 600 : 400,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.15s",
+                  flexShrink: 0,
+                  boxShadow: active ? "0 1px 4px rgba(18,140,126,0.3)" : "none",
+                }}
+              >
+                {a.l}
+              </button>
+            );
+          })}
         </div>
 
-        <div style={{ background: "var(--pp-bg-panel)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", flexShrink: 0, flexWrap: "wrap" }}>
-          {mode === "pin" ? (
-            <div style={{ flex: 1, display: "flex", gap: 8, alignItems: "center" }}>
+        {/* ── Input bar ── */}
+        <div style={{
+          background: "#F0F2F5",
+          padding: "6px 10px",
+          display: "flex", gap: 8, alignItems: "center",
+          flexShrink: 0,
+        }}>
+          {/* Emoji icon — decorative only */}
+          <div style={{ color: "#C4CCD1", display: "flex", alignItems: "center", flexShrink: 0, padding: 4, pointerEvents: "none" }}>
+            <EmojiIcon />
+          </div>
+
+          {/* Input area */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {mode === "poll" ? (
+              <button
+                onClick={onSend}
+                disabled={loading}
+                style={{
+                  width: "100%",
+                  background: loading ? "#E9EDEF" : "#fff",
+                  color: loading ? "#8696A0" : WA_TEAL,
+                  border: "none", borderRadius: 24,
+                  padding: "11px 16px", fontSize: 14,
+                  fontWeight: 600, cursor: loading ? "default" : "pointer",
+                  textAlign: "left", opacity: loading ? 0.7 : 1,
+                }}
+              >
+                📅 Send date poll to group
+              </button>
+            ) : mode === "dm" ? (
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <select
+                  value={dmTarget}
+                  onChange={(e) => onDmTargetChange(e.target.value)}
+                  disabled={loading}
+                  style={{
+                    background: "#fff", border: "none", borderRadius: 20,
+                    padding: "10px 12px", color: "#111", fontSize: 13,
+                    outline: "none", cursor: "pointer", flexShrink: 0,
+                  }}
+                >
+                  {chars.map((c) => (
+                    <option key={c.id} value={c.id}>{c.avatar} {c.name}</option>
+                  ))}
+                </select>
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => onInputChange(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
+                  disabled={loading}
+                  placeholder="Message privately..."
+                  style={{
+                    flex: 1, background: "#fff", border: "none",
+                    borderRadius: 24, padding: "11px 16px",
+                    color: "#111", fontSize: 14, outline: "none",
+                    opacity: loading ? 0.6 : 1, minWidth: 0,
+                  }}
+                />
+              </div>
+            ) : (
               <input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => onInputChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
                 disabled={loading}
-                placeholder={occ?.venue || "Enter location..."}
-                style={{ flex: 1, background: "#1A3A2C", border: "1px solid #4FC3F744", borderRadius: 24, padding: "10px 16px", color: "#4FC3F7", fontSize: 14, outline: "none", opacity: loading ? 0.6 : 1 }}
+                placeholder={
+                  mode === "nudge"    ? "Guilt them gently..." :
+                  mode === "deadline" ? "Set your deadline..." :
+                  mode === "pin"      ? occ?.venue || "Location..." :
+                  "Message"
+                }
+                style={{
+                  width: "100%", background: "#fff", border: "none",
+                  borderRadius: 24, padding: "11px 16px",
+                  color: "#111", fontSize: 14, outline: "none",
+                  opacity: loading ? 0.6 : 1, boxSizing: "border-box",
+                }}
               />
-              <button onClick={onSend} disabled={loading} style={{ background: loading ? "var(--pp-bg-elevated)" : "#1A3A2C", border: "1px solid #4FC3F766", borderRadius: "50%", width: 44, height: 44, cursor: loading ? "default" : "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: loading ? "var(--pp-text-muted)" : "#4FC3F7", transition: "background 0.15s" }}>
-                {loading ? "⏳" : "📍"}
-              </button>
+            )}
+          </div>
+
+          {/* Mic shown when input is empty — decorative only */}
+          {!input.trim() && !loading && mode !== "poll" && (
+            <div style={{ color: "#C4CCD1", display: "flex", alignItems: "center", flexShrink: 0, padding: 4, pointerEvents: "none" }}>
+              <AttachIcon />
             </div>
-          ) : mode === "poll" ? (
-            <button onClick={onSend} disabled={loading} style={{ flex: 1, background: loading ? "var(--pp-bg-elevated)" : "#1A2A3A", color: loading ? "var(--pp-text-muted)" : "#90CAF9", border: "1px solid #90CAF944", borderRadius: 24, padding: 12, fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer", opacity: loading ? 0.6 : 1, transition: "all 0.15s" }}>
-              📅 Poll upcoming dates
-            </button>
-          ) : mode === "dm" ? (
-            <div style={{ flex: 1, display: "flex", gap: 8, alignItems: "center" }}>
-              <select value={dmTarget} onChange={(e) => onDmTargetChange(e.target.value)} disabled={loading} style={{ background: "var(--pp-bg-elevated)", border: "none", borderRadius: 20, padding: "10px 12px", color: "var(--pp-text)", fontSize: 13, outline: "none", cursor: "pointer", flexShrink: 0 }}>
-                {CHARACTERS.map((c) => (
-                  <option key={c.id} value={c.id}>{c.avatar} {c.name}</option>
-                ))}
-              </select>
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => onInputChange(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
-                disabled={loading}
-                placeholder="Private message..."
-                style={{ flex: 1, background: "var(--pp-bg-elevated)", border: "none", borderRadius: 24, padding: "10px 16px", color: "var(--pp-text)", fontSize: 14, outline: "none", opacity: loading ? 0.6 : 1, minWidth: 0 }}
-              />
-              <button onClick={onSend} disabled={loading || !input.trim()} style={{ background: !loading && input.trim() ? "#1A3A5C" : "var(--pp-bg-elevated)", border: "none", borderRadius: "50%", width: 44, height: 44, cursor: !loading && input.trim() ? "pointer" : "default", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: !loading && input.trim() ? "#90CAF9" : "var(--pp-text-muted)", transition: "background 0.15s" }}>
-                {loading ? "⏳" : "▶"}
-              </button>
-            </div>
-          ) : (
-            <>
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => onInputChange(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
-                disabled={loading}
-                placeholder={mode === "nudge" ? "Guilt them gently..." : mode === "deadline" ? "Set your deadline..." : "Message the group..."}
-                style={{ flex: 1, background: "var(--pp-bg-elevated)", border: "none", borderRadius: 24, padding: "10px 16px", color: "var(--pp-text)", fontSize: 14, outline: "none", opacity: loading ? 0.6 : 1 }}
-              />
-              <button onClick={onSend} disabled={loading || !input.trim()} style={{ background: !loading && input.trim() ? "#25D366" : "var(--pp-bg-elevated)", border: "none", borderRadius: "50%", width: 44, height: 44, cursor: !loading && input.trim() ? "pointer" : "default", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: !loading && input.trim() ? "#003d20" : "var(--pp-text-muted)", transition: "background 0.15s" }}>
-                {loading ? "⏳" : "▶"}
-              </button>
-            </>
           )}
+
+          {/* Send button — only shown when there's something to send */}
+          <button
+            onClick={onSend}
+            disabled={loading || (mode !== "poll" && !input.trim())}
+            style={{
+              background: (!loading && (mode === "poll" || input.trim())) ? WA_GREEN : "#E9EDEF",
+              border: "none", borderRadius: "50%",
+              width: 46, height: 46,
+              cursor: (!loading && (mode === "poll" || input.trim())) ? "pointer" : "default",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+              color: (!loading && (mode === "poll" || input.trim())) ? "#fff" : "#C4CCD1",
+              transition: "background 0.15s, color 0.15s",
+              boxShadow: (!loading && (mode === "poll" || input.trim())) ? "0 1px 4px rgba(37,211,102,0.4)" : "none",
+            }}
+            aria-label="Send"
+          >
+            {loading ? <span style={{ fontSize: 18 }}>⏳</span> : input.trim() || mode === "poll" ? <SendIcon /> : <MicIcon />}
+          </button>
         </div>
       </div>
 
+      {/* ── Side panel overlay (mobile) ── */}
       {panelOpen && isMobile && (
         <div
           onClick={() => setPanelOpen(false)}
@@ -189,77 +349,148 @@ export function GameView({
           aria-hidden="true"
         />
       )}
-      <div
-        style={{
-          width: panelOpen ? (isMobile ? 280 : 258) : 0,
-          background: "var(--pp-bg-panel)",
-          display: "flex",
-          flexDirection: "column",
-          borderLeft: panelOpen ? "1px solid var(--pp-border)" : "none",
-          flexShrink: 0,
-          overflow: "hidden",
-          transition: "width 0.25s ease",
-          ...(isMobile && panelOpen ? { position: "fixed", right: 0, top: 0, bottom: 0, zIndex: 10, boxShadow: "-4px 0 20px rgba(0,0,0,0.3)" } : {}),
-        }}
-      >
-        <div style={{ padding: 16, borderBottom: "1px solid var(--pp-border)", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-            <div style={{ fontSize: 30 }}>{occ.emoji}</div>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-              {personalBest !== null && (
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: "var(--pp-text-muted)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.6px" }}>personal best</div>
-                  <div className="font-bitcount font-bitcount-600" style={{ color: "#FFB830", fontSize: 20, fontWeight: 600, lineHeight: 1.1 }}>{personalBest} <span style={{ fontSize: 11, color: "var(--pp-text-muted)" }}>steps</span></div>
-                </div>
-              )}
-              {isMobile && (
-                <button onClick={() => setPanelOpen(false)} style={{ background: "none", border: "none", color: "var(--pp-text-muted)", fontSize: 18, cursor: "pointer", padding: 4 }} aria-label="Close">✕</button>
-              )}
-            </div>
-          </div>
-          <div style={{ color: "var(--pp-text)", fontWeight: 700, fontSize: 14, lineHeight: 1.3, marginTop: 4 }}>{occ.name}</div>
-          <div style={{ color: "var(--pp-text-muted)", fontSize: 11, marginTop: 3, lineHeight: 1.4 }}>{occ.venue}</div>
-          <div style={{ marginTop: 12, background: "var(--pp-bg-elevated)", borderRadius: 10, padding: 12 }}>
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "baseline", gap: 4 }}>
-              <span style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, color: confirmed.length >= occ.min ? "#25D366" : confirmed.length > 0 ? "#FFB830" : "var(--pp-text-muted)", transition: "color 0.3s" }}>{confirmed.length}</span>
-              <span style={{ color: "var(--pp-text-muted)", fontSize: 16 }}>/ {occ.target}</span>
-            </div>
-            <div style={{ color: "var(--pp-text-muted)", fontSize: 11, textAlign: "center", marginTop: 3 }}>confirmed</div>
-            <div style={{ background: "var(--pp-bubble-poll-bar)", borderRadius: 4, height: 4, margin: "8px 0 5px", overflow: "hidden" }}>
-              <div style={{ background: "#25D366", width: `${Math.min(100, (confirmed.length / occ.target) * 100)}%`, height: "100%", borderRadius: 4, transition: "width 0.5s ease" }} />
-            </div>
-            {maybeCount > 0 && <div style={{ color: "#FFB830", fontSize: 11, textAlign: "center" }}>+{maybeCount} maybe{maybeCount !== 1 ? "s" : ""}</div>}
-            <div style={{ color: "var(--pp-text-muted)", fontSize: 10, textAlign: "center", marginTop: 5 }}>need {occ.min}–{occ.max} people</div>
+
+      {/* ── Group info panel ── */}
+      <div style={{
+        width: panelOpen ? (isMobile ? 280 : 260) : 0,
+        background: "#fff",
+        display: "flex", flexDirection: "column",
+        borderLeft: panelOpen ? "1px solid #E9EDEF" : "none",
+        flexShrink: 0, overflow: "hidden",
+        transition: "width 0.25s ease",
+        ...(isMobile && panelOpen ? {
+          position: "fixed", right: 0, top: 0, bottom: 0,
+          zIndex: 10, boxShadow: "-4px 0 20px rgba(0,0,0,0.2)",
+        } : {}),
+      }}>
+        {/* Panel header */}
+        <div style={{ background: WA_HEADER, padding: "14px 16px", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              onClick={() => setPanelOpen(false)}
+              style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", padding: 2 }}
+              aria-label="Close panel"
+            >
+              <CloseIcon />
+            </button>
+            <span style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>Group info</span>
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "6px 0" }}>
-          <div style={{ color: "var(--pp-text-muted)", fontSize: 10, padding: "0 16px 6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>The Group</div>
+        {/* Group summary card */}
+        <div style={{ background: "#fff", padding: "20px 16px 12px", borderBottom: "1px solid #E9EDEF", flexShrink: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: "50%",
+              background: WA_TEAL,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 32,
+            }}>
+              {occ.emoji}
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ color: "#111", fontWeight: 700, fontSize: 15 }}>{occ.name}</div>
+              <div style={{ color: "#667781", fontSize: 11.5, marginTop: 2 }}>{occ.venue}</div>
+            </div>
+          </div>
+
+          {/* Confirmed counter */}
+          <div style={{ background: "#F0F2F5", borderRadius: 12, padding: "12px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
+              <span style={{
+                fontSize: 36, fontWeight: 800, lineHeight: 1,
+                color: confirmed.length >= occ.min ? WA_GREEN : confirmed.length > 0 ? "#FFB830" : "#8696A0",
+                transition: "color 0.3s",
+              }}>
+                {confirmed.length}
+              </span>
+              <span style={{ color: "#8696A0", fontSize: 15 }}>/ {occ.target}</span>
+            </div>
+            <div style={{ color: "#667781", fontSize: 11, textAlign: "center", marginBottom: 8 }}>confirmed</div>
+            <div style={{ background: "#D9DEE3", borderRadius: 4, height: 4, overflow: "hidden" }}>
+              <div style={{
+                background: WA_GREEN,
+                width: `${Math.min(100, (confirmed.length / occ.target) * 100)}%`,
+                height: "100%", borderRadius: 4, transition: "width 0.5s ease",
+              }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+              {maybeCount > 0 && <span style={{ color: "#FFB830", fontSize: 11 }}>+{maybeCount} maybe{maybeCount !== 1 ? "s" : ""}</span>}
+              <span style={{ color: "#8696A0", fontSize: 10, marginLeft: "auto" }}>need {occ.min}–{occ.max}</span>
+            </div>
+          </div>
+
+          {/* Personal best */}
+          {personalBest !== null && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, padding: "4px 0" }}>
+              <span style={{ color: "#667781", fontSize: 12 }}>Personal best</span>
+              <span className="font-bitcount font-bitcount-600" style={{ color: "#FFB830", fontSize: 18, fontWeight: 600 }}>
+                {personalBest} <span style={{ fontSize: 11, color: "#8696A0" }}>steps</span>
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Members list */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <div style={{ color: WA_TEAL, fontSize: 13, fontWeight: 600, padding: "14px 16px 6px", letterSpacing: "0.1px" }}>
+            {chars.length} participants
+          </div>
           {chars.map((c) => {
-            const ch = CHARACTERS.find((x) => x.id === c.id);
             const d = CD[c.commitment] || CD.unknown;
             return (
-              <div key={c.id} style={{ padding: "6px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{c.avatar}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: "var(--pp-text)", fontSize: 13, fontWeight: 500 }}>{c.name}</div>
-                  <div style={{ fontSize: 11, color: d.color }}>{d.label}</div>
+              <div key={c.id} style={{
+                padding: "10px 16px",
+                display: "flex", alignItems: "center", gap: 12,
+                borderBottom: "1px solid #F0F2F5",
+              }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: "50%",
+                  background: "#E9EDEF",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 20, flexShrink: 0,
+                }}>
+                  {c.avatar}
                 </div>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>{d.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: "#111", fontSize: 14, fontWeight: 500 }}>{c.name}</div>
+                  <div style={{ fontSize: 12, color: d.color, marginTop: 1 }}>{d.label}</div>
+                </div>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{d.icon}</span>
               </div>
             );
           })}
         </div>
 
-        <div style={{ padding: 14, borderTop: "1px solid var(--pp-border)" }}>
-          <div style={{ color: "var(--pp-text-muted)", fontSize: 11, textAlign: "center", marginBottom: 8, lineHeight: 1.4 }}>
-            {steps === 0 ? "Send your first message to begin" : confirmed.length < occ.min ? `${occ.min - confirmed.length} more needed to lock in` : confirmed.length > occ.max ? `${confirmed.length - occ.max} too many — manage the excess` : "You're in range — lock in?"}
+        {/* Lock In footer */}
+        <div style={{ padding: "12px 16px", borderTop: "1px solid #E9EDEF", background: "#fff", flexShrink: 0 }}>
+          <div style={{ color: "#667781", fontSize: 11.5, textAlign: "center", marginBottom: 8, lineHeight: 1.4 }}>
+            {steps === 0
+              ? "Send your first message to begin"
+              : confirmed.length < occ.min
+              ? `${occ.min - confirmed.length} more needed to lock in`
+              : confirmed.length > occ.max
+              ? `${confirmed.length - occ.max} too many — manage the excess`
+              : "You're in range — lock in?"}
           </div>
-          <button onClick={onLockIn} style={{ width: "100%", background: inRange ? "#25D366" : "var(--pp-bg-elevated)", color: inRange ? "#003d20" : "var(--pp-text-muted)", border: "none", borderRadius: 10, padding: 13, fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "all 0.2s" }}>
+          <button
+            onClick={onLockIn}
+            style={{
+              width: "100%",
+              background: inRange ? WA_GREEN : "#E9EDEF",
+              color: inRange ? "#fff" : "#8696A0",
+              border: "none", borderRadius: 10,
+              padding: 13, fontWeight: 700, fontSize: 14,
+              cursor: inRange ? "pointer" : "default",
+              transition: "all 0.2s",
+              boxShadow: inRange ? "0 2px 8px rgba(37,211,102,0.35)" : "none",
+            }}
+          >
             🔒 Lock In
           </button>
         </div>
       </div>
+
     </div>
   );
 }

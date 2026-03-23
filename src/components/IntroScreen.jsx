@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { OCCASIONS } from "../data/occasions.js";
+import { getGroupSizeForOccasion } from "../data/namePool.js";
 
 // ─── Font style helper ───────────────────────────────────────────────────────
 
@@ -131,10 +132,14 @@ const HOW_IT_WORKS = [
 
 const STAT_COLORS = ["#25D366", "#FFB830", "#8696A0"];
 
-export function IntroScreen({ onStart }) {
-  const [occ, setOcc] = useState(() => OCCASIONS[Math.floor(Math.random() * OCCASIONS.length)]);
+export function IntroScreen({ onStart, occasionOverride = null }) {
+  const [occ, setOcc] = useState(() => occasionOverride || OCCASIONS[Math.floor(Math.random() * OCCASIONS.length)]);
+  useEffect(() => {
+    if (occasionOverride) setOcc(occasionOverride);
+  }, [occasionOverride]);
   const shuffle = () =>
     setOcc((prev) => {
+      if (occasionOverride) return occasionOverride;
       const others = OCCASIONS.filter((o) => o.id !== prev.id);
       return others[Math.floor(Math.random() * others.length)];
     });
@@ -260,7 +265,7 @@ export function IntroScreen({ onStart }) {
             {[
               { v: occ.target, l: "target", color: "#25D366", annotate: true },
               { v: `${occ.min}–${occ.max}`, l: "range", color: "#FFB830" },
-              { v: "14", l: "in the group", color: "#8696A0" },
+              { v: getGroupSizeForOccasion(occ), l: "in the group", color: "#8696A0" },
             ].map(({ v, l, color, annotate }) => (
               <div key={l} style={{ display: "flex", flexDirection: "column", gap: 4, position: "relative" }}>
                 {annotate && (

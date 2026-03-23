@@ -14,7 +14,7 @@ export async function fetchResponses({ occ, chars, mode, dmTarget, prompt, dates
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
       max_tokens: 1000,
-      system: buildSys(occ, chars),
+      system: buildSys(occ, chars, { mode, dates }),
       messages: [{ role: "user", content: prompt }],
     }),
   });
