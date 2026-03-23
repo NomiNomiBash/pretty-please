@@ -2,7 +2,42 @@ import { buildSys } from "../lib/promptBuilder.js";
 
 const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
+function stripTrailingCommas(jsonLike) {
+  return jsonLike.replace(/,\s*([}\]])/g, "$1");
+}
+
+function tryParseJsonCandidates(raw) {
+  const candidates = [raw, stripTrailingCommas(raw)];
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // keep trying
+    }
+  }
+  return null;
+}
+
+function parseAiJson(rawText) {
+  const cleaned = rawText.replace(/```json\n?|```/g, "").trim();
+  const direct = tryParseJsonCandidates(cleaned);
+  if (direct) return direct;
+
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    const sliced = cleaned.slice(start, end + 1);
+    const parsed = tryParseJsonCandidates(sliced);
+    if (parsed) return parsed;
+  }
+  throw new Error("AI response was not valid JSON");
+}
+
 export async function fetchResponses({ occ, chars, mode, dmTarget, prompt, dates }) {
+  if (!API_KEY) {
+    throw new Error("Missing VITE_ANTHROPIC_API_KEY for client-side fallback");
+  }
+
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -23,6 +58,5 @@ export async function fetchResponses({ occ, chars, mode, dmTarget, prompt, dates
   if (!data.content) {
     throw new Error("API error: " + (data.error?.message || "unknown"));
   }
-  const raw = data.content[0].text.replace(/```json\n?|```/g, "").trim();
-  return JSON.parse(raw);
+  return parseAiJson(data.content[0].text || "");
 }

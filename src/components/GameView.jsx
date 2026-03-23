@@ -34,8 +34,8 @@ const MicIcon    = () => <Icon size={22} d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c
 const SendIcon   = () => <Icon size={22} d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />;
 const CloseIcon  = () => <Icon size={18} d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />;
 
-/* ── WA wallpaper tile (SVG data URI) ── */
-const WA_TILE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Ccircle cx='50' cy='30' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Ccircle cx='30' cy='60' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Ccircle cx='70' cy='70' r='1.5' fill='%23c9bfb5' opacity='.4'/%3E%3Cpath d='M60 10 Q65 15 60 20 Q55 25 60 30' stroke='%23c9bfb5' stroke-width='1' fill='none' opacity='.25'/%3E%3Cpath d='M20 40 Q25 45 20 50 Q15 55 20 60' stroke='%23c9bfb5' stroke-width='1' fill='none' opacity='.25'/%3E%3C/svg%3E")`;
+/* ── WA wallpaper tile ── */
+const WA_TILE = `url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")`;
 
 export function GameView({
   personalBest,
@@ -43,10 +43,12 @@ export function GameView({
   chars,
   msgs,
   steps,
-  daysLeft,
+  weeksLeft,
   loading,
   narrator,
   mode,
+  pinSuggestions,
+  pollDates,
   dmTarget,
   input,
   confirmed,
@@ -55,6 +57,8 @@ export function GameView({
   onModeChange,
   onDmTargetChange,
   onInputChange,
+  onPinSuggestionSelect,
+  onPollDatesChange,
   onSend,
   onLockIn,
   endRef,
@@ -83,6 +87,7 @@ export function GameView({
   };
 
   const participantLine = chars.map((c) => c.name).join(", ");
+  const hasPollDate = Array.isArray(pollDates) && pollDates.some(Boolean);
 
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", background: WA_BG }}>
@@ -133,23 +138,23 @@ export function GameView({
             </div>
           </div>
 
-          {/* Days countdown badge */}
-          {daysLeft !== null && (
+          {/* Weeks countdown badge */}
+          {weeksLeft !== null && (
             <div style={{
-              background: daysLeft <= 1 ? "rgba(220,80,80,0.25)" : daysLeft <= 3 ? "rgba(255,184,48,0.2)" : "rgba(255,255,255,0.12)",
+              background: weeksLeft <= 1 ? "rgba(220,80,80,0.25)" : weeksLeft <= 2 ? "rgba(255,184,48,0.2)" : "rgba(255,255,255,0.12)",
               borderRadius: 10, padding: "4px 10px",
               textAlign: "center", flexShrink: 0,
               transition: "background 0.4s",
             }}>
               <div className="font-bitcount font-bitcount-600" style={{
-                color: daysLeft <= 1 ? "#ff8080" : daysLeft <= 3 ? "#FFB830" : "#fff",
+                color: weeksLeft <= 1 ? "#ff8080" : weeksLeft <= 2 ? "#FFB830" : "#fff",
                 fontSize: 20, fontWeight: 600, lineHeight: 1,
                 transition: "color 0.4s",
               }}>
-                {daysLeft}
+                {weeksLeft}
               </div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9, letterSpacing: "0.8px", textTransform: "uppercase" }}>
-                {daysLeft === 1 ? "day left" : "days"}
+                {weeksLeft === 1 ? "week left" : "weeks"}
               </div>
             </div>
           )}
@@ -243,21 +248,31 @@ export function GameView({
           {/* Input area */}
           <div style={{ flex: 1, minWidth: 0 }}>
             {mode === "poll" ? (
-              <button
-                onClick={onSend}
-                disabled={loading}
-                style={{
-                  width: "100%",
-                  background: loading ? "#E9EDEF" : "#fff",
-                  color: loading ? "#8696A0" : WA_TEAL,
-                  border: "none", borderRadius: 24,
-                  padding: "11px 16px", fontSize: 14,
-                  fontWeight: 600, cursor: loading ? "default" : "pointer",
-                  textAlign: "left", opacity: loading ? 0.7 : 1,
-                }}
-              >
-                📅 Send date poll to group
-              </button>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                {[0, 1, 2].map((idx) => (
+                  <input
+                    key={idx}
+                    type="date"
+                    value={pollDates?.[idx] || ""}
+                    onChange={(e) => {
+                      const next = [...(pollDates || ["", "", ""])];
+                      next[idx] = e.target.value;
+                      onPollDatesChange(next);
+                    }}
+                    disabled={loading}
+                    style={{
+                      background: "#fff",
+                      border: "none",
+                      borderRadius: 12,
+                      padding: "9px 8px",
+                      color: "#111",
+                      fontSize: 12,
+                      outline: "none",
+                      opacity: loading ? 0.7 : 1,
+                    }}
+                  />
+                ))}
+              </div>
             ) : mode === "dm" ? (
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <select
@@ -288,6 +303,57 @@ export function GameView({
                     opacity: loading ? 0.6 : 1, minWidth: 0,
                   }}
                 />
+              </div>
+            ) : mode === "pin" ? (
+              <div style={{ position: "relative" }}>
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => onInputChange(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && onSend()}
+                  disabled={loading}
+                  placeholder={occ?.venue || "Location..."}
+                  style={{
+                    width: "100%", background: "#fff", border: "none",
+                    borderRadius: 24, padding: "11px 16px",
+                    color: "#111", fontSize: 14, outline: "none",
+                    opacity: loading ? 0.6 : 1, boxSizing: "border-box",
+                  }}
+                />
+                {Array.isArray(pinSuggestions) && pinSuggestions.length > 0 && (
+                  <div style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: "calc(100% + 8px)",
+                    background: "#fff",
+                    border: "1px solid #D9DEE3",
+                    borderRadius: 12,
+                    boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+                    overflow: "hidden",
+                    zIndex: 6,
+                  }}>
+                    {pinSuggestions.map((s) => (
+                      <button
+                        key={s.placeId || s.description}
+                        onClick={() => onPinSuggestionSelect(s.description)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          background: "#fff",
+                          border: "none",
+                          borderBottom: "1px solid #F0F2F5",
+                          padding: "10px 12px",
+                          color: "#111",
+                          fontSize: 12.5,
+                          cursor: "pointer",
+                        }}
+                      >
+                        📍 {s.description}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <input
@@ -322,21 +388,21 @@ export function GameView({
           {/* Send button — only shown when there's something to send */}
           <button
             onClick={onSend}
-            disabled={loading || (mode !== "poll" && !input.trim())}
+            disabled={loading || (mode === "poll" ? !hasPollDate : !input.trim())}
             style={{
-              background: (!loading && (mode === "poll" || input.trim())) ? WA_GREEN : "#E9EDEF",
+              background: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? WA_GREEN : "#E9EDEF",
               border: "none", borderRadius: "50%",
               width: 46, height: 46,
-              cursor: (!loading && (mode === "poll" || input.trim())) ? "pointer" : "default",
+              cursor: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? "pointer" : "default",
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
-              color: (!loading && (mode === "poll" || input.trim())) ? "#fff" : "#C4CCD1",
+              color: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? "#fff" : "#C4CCD1",
               transition: "background 0.15s, color 0.15s",
-              boxShadow: (!loading && (mode === "poll" || input.trim())) ? "0 1px 4px rgba(37,211,102,0.4)" : "none",
+              boxShadow: (!loading && (mode === "poll" ? hasPollDate : input.trim())) ? "0 1px 4px rgba(37,211,102,0.4)" : "none",
             }}
             aria-label="Send"
           >
-            {loading ? <span style={{ fontSize: 18 }}>⏳</span> : input.trim() || mode === "poll" ? <SendIcon /> : <MicIcon />}
+            {loading ? <span style={{ fontSize: 18 }}>⏳</span> : input.trim() || (mode === "poll" && hasPollDate) ? <SendIcon /> : <MicIcon />}
           </button>
         </div>
       </div>

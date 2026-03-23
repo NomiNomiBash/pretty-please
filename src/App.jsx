@@ -35,10 +35,12 @@ export function App() {
       chars={game.chars}
       msgs={game.msgs}
       steps={game.steps}
-      daysLeft={game.daysLeft}
+      weeksLeft={game.weeksLeft}
       loading={game.loading}
       narrator={game.narrator}
       mode={game.mode}
+      pinSuggestions={game.pinSuggestions}
+      pollDates={game.pollDates}
       dmTarget={game.dmTarget}
       input={game.input}
       confirmed={game.confirmed}
@@ -47,6 +49,11 @@ export function App() {
       onModeChange={game.handleModeChange}
       onDmTargetChange={game.setDmTarget}
       onInputChange={game.setInput}
+      onPinSuggestionSelect={(label) => {
+        game.setInput(label);
+        game.setPinSuggestions([]);
+      }}
+      onPollDatesChange={game.setPollDates}
       onSend={game.handleSend}
       onLockIn={game.handleLockIn}
       endRef={game.endRef}

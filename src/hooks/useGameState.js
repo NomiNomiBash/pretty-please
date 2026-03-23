@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
-import { getUpcomingDates } from "../lib/dates.js";
-import { sendTurn, postResult } from "../api/gameApi.js";
+import { useEffect, useRef, useState } from "react";
+import { formatIsoDateLabel, getUpcomingDateInputs, getUpcomingDates } from "../lib/dates.js";
+import { fetchPlaceSuggestions, sendTurn, postResult } from "../api/gameApi.js";
 import { buildCastForOccasion } from "./useCast.js";
 import { buildResult } from "../utils/scoring.js";
 
-const STEPS_PER_DAY = 2;
+const STEPS_PER_WEEK = 4;
+const TOTAL_WEEKS = 7;
 
 const FLAKE_CHANCE = {
   ollie: 0.3,
@@ -45,8 +46,10 @@ export function useGameState() {
   const [chars, setChars] = useState([]);
   const [msgs, setMsgs] = useState([]);
   const [steps, setSteps] = useState(0);
-  const [daysLeft, setDaysLeft] = useState(null);
+  const [weeksLeft, setWeeksLeft] = useState(null);
   const [input, setInput] = useState("");
+  const [pinSuggestions, setPinSuggestions] = useState([]);
+  const [pollDates, setPollDates] = useState(["", "", ""]);
   const [mode, setMode] = useState("message");
   const [dmTarget, setDmTarget] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -62,6 +65,23 @@ export function useGameState() {
   const confirmed = chars.filter((c) => c.commitment === "yes");
   const maybeCount = chars.filter((c) => c.commitment === "maybe").length;
   const inRange = occ && confirmed.length >= occ.min && confirmed.length <= occ.max;
+
+  useEffect(() => {
+    if (mode !== "pin") {
+      setPinSuggestions([]);
+      return;
+    }
+    const q = input.trim();
+    if (q.length < 2) {
+      setPinSuggestions([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      const suggestions = await fetchPlaceSuggestions(q);
+      setPinSuggestions(suggestions);
+    }, 220);
+    return () => clearTimeout(t);
+  }, [mode, input]);
 
   const startGame = (occasion, castFromApi = null) => {
     const cast =
@@ -86,18 +106,20 @@ export function useGameState() {
       },
     ]);
     setSteps(0);
-    setDaysLeft(occasion.days);
+    setWeeksLeft(TOTAL_WEEKS);
+    const seedDates = getUpcomingDateInputs({ weeksAway: TOTAL_WEEKS });
+    setPollDates([seedDates[0] || "", seedDates[1] || "", seedDates[2] || ""]);
     setNarrator("");
     setMode("message");
     setInput("");
     setPhase("playing");
   };
 
-  const advanceDayAndApplyFlakes = (newStep) => {
-    if (newStep % STEPS_PER_DAY !== 0 || daysLeft === null || daysLeft <= 0) return;
+  const advanceWeekAndApplyFlakes = (newStep) => {
+    if (newStep % STEPS_PER_WEEK !== 0 || weeksLeft === null || weeksLeft <= 0) return;
 
-    const newDaysLeft = daysLeft - 1;
-    setDaysLeft(newDaysLeft);
+    const newWeeksLeft = weeksLeft - 1;
+    setWeeksLeft(newWeeksLeft);
 
     const flakeSystemMsgs = [];
     const updated = chars.map((c) => {
@@ -121,14 +143,14 @@ export function useGameState() {
       return c;
     });
 
-    const dayLabel =
-      newDaysLeft === 0
-        ? "📅 The day is here."
-        : newDaysLeft === 1
-        ? "📅 One day left."
-        : `📅 ${newDaysLeft} days to go.`;
+    const weekLabel =
+      newWeeksLeft === 0
+        ? "📆 Event week is here."
+        : newWeeksLeft === 1
+        ? "📆 Final week."
+        : `📆 ${newWeeksLeft} weeks to go.`;
     setChars(updated);
-    setMsgs((p) => [...p, { id: `day${Date.now()}`, type: "system", text: dayLabel }, ...flakeSystemMsgs]);
+    setMsgs((p) => [...p, { id: `week${Date.now()}`, type: "system", text: weekLabel }, ...flakeSystemMsgs]);
   };
 
   const handleSend = async () => {
@@ -136,7 +158,16 @@ export function useGameState() {
     const needsText = mode !== "poll";
     if (needsText && !input.trim() && mode !== "pin") return;
 
-    const dates = getUpcomingDates();
+    const pollWeeksAway = Math.max(0, weeksLeft ?? TOTAL_WEEKS);
+    const fallbackDates = getUpcomingDates({ weeksAway: pollWeeksAway });
+    const pickedDates = Array.from(
+      new Set(
+        pollDates
+          .map((iso) => formatIsoDateLabel(iso))
+          .filter(Boolean)
+      )
+    );
+    const dates = pickedDates.length > 0 ? pickedDates : fallbackDates;
     const pollId = `p${Date.now()}`;
     const pinLocation = mode === "pin" ? input.trim() || occ.venue : "";
     let txt = "";
@@ -156,6 +187,8 @@ export function useGameState() {
         pollId,
         votes: Object.fromEntries(dates.map((d) => [d, []])),
       };
+      const resetDates = getUpcomingDateInputs({ weeksAway: pollWeeksAway });
+      setPollDates([resetDates[0] || "", resetDates[1] || "", resetDates[2] || ""]);
     } else if (mode === "dm") {
       const ch = chars.find((c) => c.id === dmTarget);
       txt = input.trim();
@@ -192,12 +225,12 @@ export function useGameState() {
         const ch = chars.find((c) => c.id === r.characterId);
         if (!ch) continue;
 
-        const delayBefore = 1500 + i * 800 + Math.random() * 2200;
+        const delayBefore = 450 + i * 250 + Math.random() * 700;
         await new Promise((x) => setTimeout(x, delayBefore));
         const tid = `t${r.characterId}${Date.now()}`;
         setMsgs((p) => [...p, { id: tid, type: "typing", charName: ch.name, avatar: ch.avatar }]);
 
-        const typingDuration = 3000 + Math.random() * 3000;
+        const typingDuration = 900 + Math.random() * 1100;
         await new Promise((x) => setTimeout(x, typingDuration));
 
         const isDm = mode === "dm";
@@ -235,10 +268,11 @@ export function useGameState() {
         );
       }
 
-      advanceDayAndApplyFlakes(newStep);
+      advanceWeekAndApplyFlakes(newStep);
     } catch (e) {
       console.error(e);
-      setMsgs((p) => [...p, { id: Date.now(), type: "system", text: "📡 Signal lost in Zone 2. Try again." }]);
+      const detail = e?.message ? ` (${e.message})` : "";
+      setMsgs((p) => [...p, { id: Date.now(), type: "system", text: `📡 Signal lost in Zone 2. Try again.${detail}` }]);
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -267,7 +301,12 @@ export function useGameState() {
   const handleModeChange = (id) => {
     setMode(id);
     if (id === "pin") setInput(occ?.venue || "");
+    else if (id === "poll") {
+      const seedDates = getUpcomingDateInputs({ weeksAway: Math.max(0, weeksLeft ?? TOTAL_WEEKS) });
+      setPollDates([seedDates[0] || "", seedDates[1] || "", seedDates[2] || ""]);
+    }
     else if (id !== "dm") setInput("");
+    if (id !== "pin") setPinSuggestions([]);
   };
 
   const restart = () => {
@@ -281,9 +320,11 @@ export function useGameState() {
     chars,
     msgs,
     steps,
-    daysLeft,
+    weeksLeft,
     input,
     mode,
+    pinSuggestions,
+    pollDates,
     dmTarget,
     loading,
     narrator,
@@ -297,6 +338,8 @@ export function useGameState() {
     startGame,
     setDmTarget,
     setInput,
+    setPinSuggestions,
+    setPollDates,
     handleSend,
     handleLockIn,
     handleModeChange,

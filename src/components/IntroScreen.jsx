@@ -121,28 +121,25 @@ const Highlight = ({ children, color = "#FFF176", rotate = "-0.5deg" }) => (
 // ─── Main component ──────────────────────────────────────────────────────────
 
 const HOW_IT_WORKS = [
+  { e: "🗓️", k: "Calendar", v: "7 weeks total, 4 steps per week" },
   { e: "💬", k: "Message",  v: "say something to the group" },
   { e: "📅", k: "Poll",     v: "propose dates" },
-  { e: "🔔", k: "Nudge",    v: "guilt the ones who've gone quiet" },
-  { e: "⏰", k: "Deadline", v: "'respond by Sunday or you're out'" },
-  { e: "📍", k: "Pin",      v: "drop the location" },
-  { e: "🤫", k: "DM",       v: "private message one person directly" },
-  { e: "🔒", k: "Lock In",  v: "call it when you think you've got the numbers" },
+  { e: "🔔", k: "Nudge",    v: "guilt trip the ones gone quiet" },
+  { e: "⏰", k: "Deadline", v: "'respond by Sunday or else'" },
+  { e: "📍", k: "Pin",      v: "suggest a location" },
+  { e: "🤫", k: "DM",       v: "private message directly" },
+  { e: "🔒", k: "Lock In",  v: "when you think you've got them all" },
 ];
 
 const STAT_COLORS = ["#25D366", "#FFB830", "#8696A0"];
 
 export function IntroScreen({ onStart, occasionOverride = null }) {
-  const [occ, setOcc] = useState(() => occasionOverride || OCCASIONS[Math.floor(Math.random() * OCCASIONS.length)]);
+  const [occ, setOcc] = useState(
+    () => occasionOverride || OCCASIONS[new Date().getDate() % OCCASIONS.length]
+  );
   useEffect(() => {
     if (occasionOverride) setOcc(occasionOverride);
   }, [occasionOverride]);
-  const shuffle = () =>
-    setOcc((prev) => {
-      if (occasionOverride) return occasionOverride;
-      const others = OCCASIONS.filter((o) => o.id !== prev.id);
-      return others[Math.floor(Math.random() * others.length)];
-    });
 
   return (
     <div style={{
@@ -306,20 +303,6 @@ export function IntroScreen({ onStart, occasionOverride = null }) {
             </button>
           </div>
 
-          <button
-            onClick={shuffle}
-            className="mansalva"
-            style={{
-              width: "100%", background: "transparent", color: "#9a8e83",
-              border: "1.5px dashed #c0b8ae",
-              borderRadius: 10, padding: "11px", fontSize: 16,
-              cursor: "pointer", transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#8696A0"; e.currentTarget.style.color = "#4a4a4a"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#c0b8ae"; e.currentTarget.style.color = "#9a8e83"; }}
-          >
-            🎲 different occasion
-          </button>
         </div>
 
         {/* ── How it works — post-it ── */}

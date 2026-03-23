@@ -1,12 +1,37 @@
 import { useEffect, useState } from "react";
 import { CHARACTERS } from "../data/characters.js";
-import { assignIdentities, pickGroupForOccasion } from "../data/namePool.js";
+import {
+  assignIdentities,
+  assignIdentitiesSeeded,
+  pickGroupForOccasion,
+  pickGroupForOccasionSeeded,
+} from "../data/namePool.js";
 import { getTodayCast } from "../api/gameApi.js";
 import { OCCASIONS } from "../data/occasions.js";
 
 export function buildCastForOccasion(occasion) {
   const group = pickGroupForOccasion(CHARACTERS, occasion);
   return assignIdentities(group).map((c) => ({ ...c, commitment: "unknown", lastMsg: null }));
+}
+
+function getTodayDateKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function pickDailyOccasion(dateKey) {
+  const day = parseInt(dateKey.slice(-2), 10);
+  return OCCASIONS[day % OCCASIONS.length];
+}
+
+export function buildDailyFallbackCast(dateKey = getTodayDateKey()) {
+  const occasion = pickDailyOccasion(dateKey);
+  const group = pickGroupForOccasionSeeded(CHARACTERS, occasion, dateKey);
+  const characters = assignIdentitiesSeeded(group, dateKey).map((c) => ({
+    ...c,
+    commitment: "unknown",
+    lastMsg: null,
+  }));
+  return { date: dateKey, occasion, characters, source: "local-fallback-seeded" };
 }
 
 export function useCast() {
@@ -23,13 +48,7 @@ export function useCast() {
       } catch (e) {
         if (alive) {
           setError(e);
-          const occasion = OCCASIONS[0];
-          setCastData({
-            date: new Date().toISOString().slice(0, 10),
-            occasion,
-            characters: buildCastForOccasion(occasion),
-            source: "local-fallback",
-          });
+          setCastData(buildDailyFallbackCast());
         }
       } finally {
         if (alive) setLoading(false);
