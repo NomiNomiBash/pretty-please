@@ -7,7 +7,7 @@ import {
   pickGroupForOccasionSeeded,
 } from "../data/namePool.js";
 import { getTodayCast } from "../api/gameApi.js";
-import { OCCASIONS } from "../data/occasions.js";
+import { pickOccasionForCalendarDay } from "../data/occasions.js";
 
 export function buildCastForOccasion(occasion) {
   const group = pickGroupForOccasion(CHARACTERS, occasion);
@@ -20,7 +20,7 @@ function getTodayDateKey() {
 
 function pickDailyOccasion(dateKey) {
   const day = parseInt(dateKey.slice(-2), 10);
-  return OCCASIONS[day % OCCASIONS.length];
+  return pickOccasionForCalendarDay(day);
 }
 
 export function buildDailyFallbackCast(dateKey = getTodayDateKey()) {

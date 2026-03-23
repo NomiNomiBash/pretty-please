@@ -1,12 +1,11 @@
 import { fetchResponses } from "./anthropic.js";
-import { OCCASIONS } from "../data/occasions.js";
+import { pickOccasionForCalendarDay } from "../data/occasions.js";
 import { buildCastForOccasion } from "../hooks/useCast.js";
 
 const USE_API_ROUTES = !import.meta.env.DEV || import.meta.env.VITE_USE_API_ROUTES === "true";
 
 function pickTodayOccasion() {
-  const day = new Date().getDate();
-  return OCCASIONS[day % OCCASIONS.length];
+  return pickOccasionForCalendarDay();
 }
 
 export async function getTodayCast() {

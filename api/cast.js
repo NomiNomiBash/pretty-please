@@ -1,10 +1,9 @@
-import { OCCASIONS } from "../src/data/occasions.js";
+import { pickOccasionForCalendarDay } from "../src/data/occasions.js";
 import { CHARACTERS } from "../src/data/characters.js";
 import { assignIdentities, pickGroupForOccasion } from "../src/data/namePool.js";
 
 function pickTodayOccasion() {
-  const day = new Date().getDate();
-  return OCCASIONS[day % OCCASIONS.length];
+  return pickOccasionForCalendarDay();
 }
 
 export default function handler(req, res) {

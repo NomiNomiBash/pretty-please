@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { OCCASIONS } from "../data/occasions.js";
+import { pickOccasionForCalendarDay } from "../data/occasions.js";
 import { getGroupSizeForOccasion } from "../data/namePool.js";
 
 // ─── Font style helper ───────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ const STAT_COLORS = ["#25D366", "#FFB830", "#8696A0"];
 
 export function IntroScreen({ onStart, occasionOverride = null }) {
   const [occ, setOcc] = useState(
-    () => occasionOverride || OCCASIONS[new Date().getDate() % OCCASIONS.length]
+    () => occasionOverride || pickOccasionForCalendarDay()
   );
   useEffect(() => {
     if (occasionOverride) setOcc(occasionOverride);
