@@ -75,8 +75,8 @@ A SAMPLE of category paragraphs still rotates below (large slice each turn). Per
 /** How many category paragraphs to inject per turn — high so the model sees busy-London variety every time. */
 const SAMPLED_SECTION_COUNT = 8;
 
-function hashSeed(occasionId, turnStep) {
-  const s = `${occasionId ?? "occ"}:${turnStep ?? 0}`;
+function hashSeed(occasionId, turnStep, sessionVarietyKey = "") {
+  const s = `${occasionId ?? "occ"}:${turnStep ?? 0}:${sessionVarietyKey ?? ""}`;
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -105,10 +105,10 @@ function seededPickKeys(allKeys, count, seed) {
 }
 
 /**
- * @param {{ occasionId?: string, turnStep?: number }} p
+ * @param {{ occasionId?: string, turnStep?: number, sessionVarietyKey?: string }} p
  */
-export function buildLondonHipMilieuBlock({ occasionId, turnStep } = {}) {
-  const seed = hashSeed(occasionId, turnStep);
+export function buildLondonHipMilieuBlock({ occasionId, turnStep, sessionVarietyKey = "" } = {}) {
+  const seed = hashSeed(occasionId, turnStep, sessionVarietyKey);
   const keys = Object.keys(MILIEU_SECTIONS);
   const picked = seededPickKeys(keys, SAMPLED_SECTION_COUNT, seed);
   const body = picked.map((k) => MILIEU_SECTIONS[k]).join("\n\n");

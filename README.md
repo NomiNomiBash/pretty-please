@@ -25,10 +25,9 @@ npm run dev
 
 **How API calls work in dev**
 
-- By default the app does **not** use `/api/*` in dev. It uses bundled `editions/*.json` when present, otherwise a **seeded procedural** cast, and sends turns **from the browser** via `VITE_ANTHROPIC_API_KEY`.
-- To exercise the same **server routes** as production locally, set in `.env`:
-  - `VITE_USE_API_ROUTES=true`
-  - Run a dev server that serves `api/` (e.g. `vercel dev` from this directory), **or** point your build at a deployed preview and use that origin — the client will call `/api/cast` and `/api/turn` on whatever host serves the app.
+- **Default:** turns go **from the browser** to Anthropic using **`VITE_ANTHROPIC_API_KEY`**. That is **not** the same variable as Vercel’s **`ANTHROPIC_API_KEY`** — production never uses the `VITE_` key for turns, so “Vercel works but localhost 401” usually means the local `VITE_` key is missing, wrong, or revoked.
+- **Use your live API without a browser key:** in `.env` set `VITE_USE_API_ROUTES=true` and **`DEV_API_PROXY=https://your-deployment.vercel.app`** (no trailing slash). Restart `npm run dev`. Vite proxies `/api/*` to that host so `/api/turn` uses the same server key as production.
+- **Or** `VITE_USE_API_ROUTES=true` and run **`vercel dev`** from this folder so `/api` is local with `ANTHROPIC_API_KEY` in `.env` / `.env.local`.
 
 Production builds (`npm run build`) use **`/api/*` on the same origin** — no Anthropic key in the client.
 

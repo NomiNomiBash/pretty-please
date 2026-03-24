@@ -39,6 +39,24 @@ export const HARD_RULES_BLOCK = `━━ HARD RULES ━━
 - CALENDAR: Do not invent specific calendar days (e.g. "the 14th", "Tuesday the 8th") unless the player wrote them, or they appear in poll options, or they match the REAL CALENDAR block above. If the player says "in four weeks", every character in the batch must agree on the same approximate window (use the +28 day line as reference). Never contradict each other with different random dates.`;
 
 /**
+ * First two LLM turns (turnStep 1–2) — highest stakes for retention.
+ * @param {number} turnStep
+ */
+export function buildOpeningHookGuidance(turnStep) {
+  if (turnStep > 2) return "";
+  return `━━ OPENING HOOK (turns 1–2 only — this sells the game) ━━
+The player is still in the **first moments**. This response batch must **pull them in**: real group-chat mess, not polite planning software.
+- **Voice first:** every line should sound unmistakably like *that* fingerprint — attitude, hedging, hype, or frost as appropriate. Smuggle **milieu** (competing life / vague busy) into early replies; no generic "sounds good" opener energy.
+- **Friction beats harmony:** someone off-balance, too keen, too cold, mildly annoyed, or quietly competing with another cast name when it fits. Do **not** make the whole cast uniformly agreeable or interchangeable.
+- If **two** characters speak, they should **clash or contrast** (pace, stance, or subtext) — not two versions of the same vibe.
+- **Poll / pin / nudge / deadline** this early: same bar — memorable, human, slightly unhinged-within-bounds; nobody reads like a calendar API.
+- **narratorComment:** one sharp, dry punchline if you have it (stay within the word cap); omit if flat.
+- Still obey HARD RULES: brevity caps, no telepathy, organiser gender-neutral, valid JSON.
+
+`;
+}
+
+/**
  * @param {number} weeksElapsed
  */
 export function buildWeekPressureGuidance(weeksElapsed) {
@@ -130,6 +148,7 @@ export function buildPlayerActionsSection({
     : "";
   return `━━ PLAYER ACTIONS ━━
 message   → 1–2 characters reply. Not everyone. Silence is realistic.
+            When you pick who speaks, **spread replies across the cast** over the run — do not default to the same one or two ids every turn unless the chat history already focuses on them.
             Default commitment output is "unknown", "seen", or "maybe" — not "yes". A "yes" should feel like a small victory for the player, not a default.
             Read the player's line in the user message: if they named a real-world anchor (place, show, restaurant, title), at least ONE response in this batch should use beat ANCHOR-DETAIL for that anchor.
             When several characters speak, at least one pair can interact: INNER-CIRCLE-PING or REFERENCE-SOMEONE toward someone who also speaks this turn or who spoke last — especially along inner-circle lines.${londonMessageTexture}

@@ -22,6 +22,11 @@ import {
 } from "../lib/playerTurn/index.js";
 import { removeCharacterFromPollVotes } from "../lib/pollMessageUtils.js";
 import { appendSystemMsgsOnce, runSetCharsTransitionOnce } from "../lib/reactStrictModeDedupe.js";
+import {
+  newSessionVarietyKey,
+  pickBootstrapOpener,
+  pickBootstrapSpeaker,
+} from "../lib/sessionVariety.js";
 
 const FLAKE_CHANCE = {
   ollie: 0.3,
@@ -155,6 +160,8 @@ export function useGameState() {
     const saved = localStorage.getItem("pp-personal-best");
     return saved ? parseInt(saved, 10) : null;
   });
+  /** New UUID each `startGame` so milieu sampling + model instructions differ on replay. */
+  const [sessionVarietyKey, setSessionVarietyKey] = useState("");
   const endRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -182,14 +189,17 @@ export function useGameState() {
 
   const startGame = (occasion, castFromApi = null, gameDateKey = null) => {
     const dateKey = gameDateKey ?? new Date().toISOString().slice(0, 10);
+    const varietyKey = newSessionVarietyKey();
     const raw =
       castFromApi?.map((c) => ({ ...c, commitment: "unknown", lastMsg: null })) ??
       buildCastForOccasion(occasion);
     // Exactly one archetype per run ignores DMs until week threshold (see characters.js).
     const cast = attachCloseTies(assignSingleDmGhost(raw, dateKey), dateKey, null);
     const names = cast.map((c) => c.name).join(", ");
-    const firstSpeaker = cast.find((c) => c.id === "marcus") ?? cast[0];
+    const firstSpeaker = pickBootstrapSpeaker(cast, varietyKey) ?? cast[0];
+    const bootstrapLine = pickBootstrapOpener(varietyKey, firstSpeaker.id);
 
+    setSessionVarietyKey(varietyKey);
     setOcc(occasion);
     setChars(cast);
     setDmTarget(cast[0]?.id ?? null);
@@ -202,7 +212,7 @@ export function useGameState() {
         sender: firstSpeaker.name,
         avatar: firstSpeaker.avatar,
         characterId: firstSpeaker.id,
-        text: "Right, a group chat. What are we actually planning then?",
+        text: bootstrapLine,
       },
     ]);
     setSteps(0);
@@ -359,6 +369,8 @@ export function useGameState() {
         chars,
         dates,
         londonMilieuActive: !occ?.editionSettingLine?.trim(),
+        sessionVarietyKey,
+        turnStep: newStep,
       });
 
       const ai = await sendTurn({
@@ -371,6 +383,7 @@ export function useGameState() {
         weeksLeft,
         totalWeeks: TOTAL_WEEKS,
         turnStep: newStep,
+        sessionVarietyKey,
       });
       if (ai.narratorComment) setNarrator(ai.narratorComment);
 

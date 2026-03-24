@@ -46,7 +46,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { occ, chars, mode, prompt, dates, weeksLeft, totalWeeks, turnStep } = parseBody(req);
+    const { occ, chars, mode, prompt, dates, weeksLeft, totalWeeks, turnStep, sessionVarietyKey } =
+      parseBody(req);
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -57,8 +58,17 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1000,
-        system: buildSys(occ, chars, { mode, dates, weeksLeft, totalWeeks, turnStep }),
+        system: buildSys(occ, chars, {
+          mode,
+          dates,
+          weeksLeft,
+          totalWeeks,
+          turnStep,
+          sessionVarietyKey,
+        }),
         messages: [{ role: "user", content: prompt }],
+        temperature: 1,
+        top_p: 0.92,
       }),
     });
 

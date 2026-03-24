@@ -3,7 +3,17 @@ import { getLatestPollOptionStrings } from "../pollMessageUtils.js";
 /**
  * User → model: history + action + mode-specific instructions (drama levers live in promptBuilder + here).
  */
-export function buildTurnPrompt({ msgs, txt, mode, dmChar, chars, dates, londonMilieuActive = false }) {
+export function buildTurnPrompt({
+  msgs,
+  txt,
+  mode,
+  dmChar,
+  chars,
+  dates,
+  londonMilieuActive = false,
+  sessionVarietyKey = "",
+  turnStep = 0,
+}) {
   const hist = msgs
     .filter((m) => m.type === "player" || m.type === "character")
     .slice(-10)
@@ -40,7 +50,16 @@ export function buildTurnPrompt({ msgs, txt, mode, dmChar, chars, dates, londonM
     ? "\nReminder: London default — characters are stretched; replies need competing-life texture (milieu / lean / vague busy + fingerprint), not logistics-only ping-pong.\n"
     : "";
 
+  const varietyCue = sessionVarietyKey
+    ? `\nPlaythrough id (vary speakers & phrasing vs other runs): ${sessionVarietyKey}\n`
+    : "";
+
+  const openingHookCue =
+    turnStep > 0 && turnStep <= 2
+      ? "\nPRIORITY: Opening hook turn — make this batch irresistible (voice, friction, milieu). No bland committee energy.\n"
+      : "";
+
   return `Chat history:\n${hist || "(no messages yet)"}\n\nPlayer action (${mode}): "${txt}"\n${
     dmChar ? `\nDM TARGET: Only ${dmChar.name} (id "${dmChar.id}") should respond. Nobody else.\n` : ""
-  }\nCurrent commitments: ${chars.map((c) => `${c.name}=${c.commitment}`).join(", ")}\n${londonBusyCue}${pollBlock}${pollRetreatBlock}${nudgeBlock}${deadlineBlock}\nReturn JSON only.`;
+  }\nCurrent commitments: ${chars.map((c) => `${c.name}=${c.commitment}`).join(", ")}\n${varietyCue}${openingHookCue}${londonBusyCue}${pollBlock}${pollRetreatBlock}${nudgeBlock}${deadlineBlock}\nReturn JSON only.`;
 }

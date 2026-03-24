@@ -140,20 +140,37 @@ export function GameView({
             <BackIcon />
           </div>
 
-          {/* Avatar */}
-          <div style={{
-            width: 40, height: 40, borderRadius: "50%",
-            background: WA_TEAL,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, flexShrink: 0, cursor: "pointer",
-          }}
+          {/* Avatar — opens group info (same as title + ⋮) */}
+          <button
+            type="button"
             onClick={() => setPanelOpen((o) => !o)}
+            aria-label={panelOpen ? "Close group info" : "Open group info"}
+            style={{
+              width: 40, height: 40, borderRadius: "50%",
+              background: WA_TEAL,
+              border: "none",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 20, flexShrink: 0, cursor: "pointer", padding: 0,
+              WebkitTapHighlightColor: "transparent",
+            }}
           >
             {occ.emoji}
-          </div>
+          </button>
 
-          {/* Name + participants */}
-          <div style={{ flex: 1, minWidth: 0, cursor: "pointer", marginLeft: 8 }} onClick={() => setPanelOpen((o) => !o)}>
+          {/* Name + participants — full-width tap target on mobile */}
+          <button
+            type="button"
+            onClick={() => setPanelOpen((o) => !o)}
+            aria-expanded={panelOpen}
+            aria-label={`${occ.name}. Group info. ${chars.length} participants.`}
+            style={{
+              flex: 1, minWidth: 0, marginLeft: 8,
+              padding: "8px 6px 8px 2px",
+              textAlign: "left",
+              background: "none", border: "none", cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
             <div style={{
               color: "#fff", fontWeight: 600, fontSize: 15,
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2,
@@ -166,7 +183,7 @@ export function GameView({
             }}>
               {participantLine}
             </div>
-          </div>
+          </button>
 
           {/* Weeks countdown badge */}
           {weeksLeft !== null && (
@@ -199,11 +216,30 @@ export function GameView({
             <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9, letterSpacing: "0.8px", textTransform: "uppercase" }}>steps</div>
           </div>
 
-          {/* Action icons — decorative chrome only */}
-          <div style={{ display: "flex", gap: 2, color: "rgba(255,255,255,0.28)", flexShrink: 0, pointerEvents: "none" }}>
-            <div style={{ padding: 6, display: "flex", alignItems: "center" }}><VideoIcon /></div>
-            <div style={{ padding: 6, display: "flex", alignItems: "center" }}><PhoneIcon /></div>
-            <div style={{ padding: 6, display: "flex", alignItems: "center" }}><MenuIcon /></div>
+          {/* Video / phone — decorative. ⋮ opens group info (matches title tap). */}
+          <div style={{ display: "flex", gap: 0, alignItems: "center", flexShrink: 0 }}>
+            <div style={{ padding: 6, display: "flex", alignItems: "center", color: "rgba(255,255,255,0.28)", pointerEvents: "none" }}>
+              <VideoIcon />
+            </div>
+            <div style={{ padding: 6, display: "flex", alignItems: "center", color: "rgba(255,255,255,0.28)", pointerEvents: "none" }}>
+              <PhoneIcon />
+            </div>
+            <button
+              type="button"
+              onClick={() => setPanelOpen((o) => !o)}
+              aria-label={panelOpen ? "Close group info" : "Open group info"}
+              style={{
+                padding: 8,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                minWidth: 44, minHeight: 44,
+                background: "none", border: "none",
+                color: "rgba(255,255,255,0.88)", cursor: "pointer",
+                borderRadius: 8,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <MenuIcon />
+            </button>
           </div>
         </div>
 
