@@ -1,0 +1,64 @@
+{
+  "theme": "Berlin guest list (sample edition — rename to today's UTC date to go live)",
+  "settingLine": "Berlin, not London. Same flaky group-chat energy; U-Bahn and Kiez instead of the Tube.",
+  "occasion": {
+    "id": "rooftop-berlin",
+    "name": "Rooftop Sundown",
+    "emoji": "🌇",
+    "venue": "Klunkerkranich, Neukölln",
+    "target": 8,
+    "min": 5,
+    "max": 12,
+    "note": "Weather-dependent. If it rains, the plan becomes 'somewhere inside' and nobody agrees where for 48 hours."
+  },
+  "characters": [
+    {
+      "id": "tom",
+      "name": "Tom",
+      "avatar": "🧑🏻",
+      "lastSeen": "today at 18:02",
+      "personality": "Works at a startup that's 'about to close a round'. Will reply 'on it' and then disappear for three days.",
+      "linguisticFingerprint": "MAX 6 words per message. No punctuation except a full stop sometimes. No emoji. Flat Berlin tech energy."
+    },
+    {
+      "id": "zara",
+      "name": "Zara",
+      "avatar": "👩🏽",
+      "lastSeen": "online",
+      "personality": "Treats anything past Ringbahn as a expedition. Will ask if there's an U-Bahn within guilt distance.",
+      "linguisticFingerprint": "Mentions U-Bahn lines and Kiez drama. Theatrical about travel time. Never a plain yes."
+    },
+    {
+      "id": "marcus",
+      "name": "Marcus",
+      "avatar": "👨🏾",
+      "lastSeen": "today at 09:10",
+      "personality": "The one who actually reads the venue FAQ. Sends a screenshot of the door policy. Still somehow unsure if he's in.",
+      "linguisticFingerprint": "Full sentences. No emoji. One clarifying question per message. Unsettlingly prepared."
+    },
+    {
+      "id": "bex",
+      "name": "Bex",
+      "avatar": "👩🏼",
+      "lastSeen": "today at 12:44",
+      "personality": "Will bring someone nobody has met. That person has strong opinions about the playlist.",
+      "linguisticFingerprint": "Warm, rapid-fire short texts. Uses people's names. Asks if she can bring someone in message two."
+    },
+    {
+      "id": "hamish",
+      "name": "Hamish",
+      "avatar": "🧔🏻",
+      "lastSeen": "4 days ago",
+      "personality": "Claims he lives in Berlin but is in Glasgow this week. And last week. Replies 'aye' or nothing.",
+      "linguisticFingerprint": "1–3 words only. Scottish particles. Never explains."
+    },
+    {
+      "id": "nadia",
+      "name": "Nadia",
+      "avatar": "👩🏿",
+      "lastSeen": "today at 07:55",
+      "personality": "Sound bath at 8. Cold plunge evangelist. In principle always free; in practice never.",
+      "linguisticFingerprint": "Wellness jargon. Commits in theory, blocks in practice. One nature emoji max per message."
+    }
+  ]
+}

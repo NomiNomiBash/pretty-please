@@ -4,9 +4,89 @@ import { GameView } from "./components/GameView.jsx";
 import { useGameState } from "./hooks/useGameState.js";
 import { useCast } from "./hooks/useCast.js";
 
+function clearPreviewResultQueryAndReload() {
+  window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+  window.location.reload();
+}
+
 export function App() {
   const game = useGameState();
   const { castData } = useCast();
+
+  // Dev only: open result screen without playing — e.g. http://localhost:5173/?previewResult=win
+  if (import.meta.env.DEV) {
+    const pr = new URLSearchParams(window.location.search).get("previewResult");
+    if (pr === "win") {
+      return (
+        <ResultScreen
+          result={{
+            type: "win",
+            title: "🎉 It's Happening",
+            message: "6/8 confirmed. The House Warming is ON. Took 10 steps. (Dev preview)",
+            score: 78,
+            attendees: [
+              { name: "Priya", avatar: "👩🏾" },
+              { name: "Tom", avatar: "🧑🏻" },
+              { name: "Zara", avatar: "👩🏽" },
+              { name: "Marcus", avatar: "👨🏾" },
+              { name: "Bex", avatar: "👩🏼" },
+              { name: "Ollie", avatar: "🧑🏽" },
+            ],
+            isNewBest: true,
+          }}
+          occasion={null}
+          steps={10}
+          personalBest={null}
+          onRestart={clearPreviewResultQueryAndReload}
+        />
+      );
+    }
+    if (pr === "loss") {
+      return (
+        <ResultScreen
+          result={{
+            type: "loss",
+            title: "💀 Not Enough",
+            message: "Only 2 confirmed. Needed at least 5. (Dev preview)",
+            score: 16,
+            attendees: [],
+          }}
+          occasion={null}
+          steps={22}
+          personalBest={12}
+          onRestart={clearPreviewResultQueryAndReload}
+        />
+      );
+    }
+    if (pr === "tooMany") {
+      return (
+        <ResultScreen
+          result={{
+            type: "loss",
+            title: "😬 Too Many People",
+            message: "10 said yes. You only had room for 8. (Dev preview)",
+            score: 48,
+            attendees: [
+              { name: "Ayo", avatar: "👩🏿" },
+              { name: "Bex", avatar: "👩🏼" },
+              { name: "Callum", avatar: "👨🏻" },
+              { name: "Hamish", avatar: "🧔🏻" },
+              { name: "Jade", avatar: "👩🏽" },
+              { name: "Marcus", avatar: "👨🏾" },
+              { name: "Nadia", avatar: "👩🏿" },
+              { name: "Ollie", avatar: "🧑🏽" },
+              { name: "Priya", avatar: "👩🏾" },
+              { name: "Remi", avatar: "👩🏻" },
+            ],
+          }}
+          occasion={null}
+          steps={18}
+          personalBest={null}
+          onRestart={clearPreviewResultQueryAndReload}
+        />
+      );
+    }
+  }
 
   if (game.phase === "intro") {
     return (
@@ -30,6 +110,8 @@ export function App() {
     );
   }
 
+  /* Player actions (message / poll / pin / DM / nudge / deadline) are validated and prepared in
+     `src/lib/playerTurn/` — each mode maps to prep + optional post-AI drama hooks in `postAiByMode.js`. */
   return (
     <GameView
       personalBest={game.personalBest}

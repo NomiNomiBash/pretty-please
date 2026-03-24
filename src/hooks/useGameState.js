@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { formatIsoDateLabel, getUpcomingDateInputs, getUpcomingDates } from "../lib/dates.js";
+import { getUpcomingDateInputs } from "../lib/dates.js";
 import { fetchPlaceSuggestions, sendTurn, postResult } from "../api/gameApi.js";
-import { buildCastForOccasion } from "./useCast.js";
+import { buildCastForOccasion } from "../lib/proceduralCast.js";
 import { buildResult, resolveCommitmentsAtLockIn } from "../utils/scoring.js";
 import { assignSingleDmGhost, characterGhostingDm } from "../data/characters.js";
-
-const STEPS_PER_WEEK = 4;
-const TOTAL_WEEKS = 7;
+import {
+  STEPS_PER_WEEK,
+  TOTAL_WEEKS,
+  validatePlayerTurn,
+  preparePlayerTurn,
+  buildTurnPrompt,
+  scheduleAfterAi,
+  runPostResponseDrama,
+  finalizeDisposableAction,
+} from "../lib/playerTurn/index.js";
 
 const FLAKE_CHANCE = {
   ollie: 0.3,
@@ -123,7 +130,7 @@ export function useGameState() {
         type: "character",
         sender: firstSpeaker.name,
         avatar: firstSpeaker.avatar,
-        characterId: "marcus",
+        characterId: firstSpeaker.id,
         text: "Right, a group chat. What are we actually planning then?",
       },
     ]);
@@ -208,63 +215,30 @@ export function useGameState() {
   };
 
   const handleSend = async () => {
-    if (loading || !occ) return;
-    const noTextModes = ["poll", "nudge", "deadline"];
-    if (!noTextModes.includes(mode) && !input.trim() && mode !== "pin") return;
-    if (mode === "nudge") {
-      if (nudgeUsed) return;
-      const targets = chars.filter((c) => ["ghost", "unknown", "seen"].includes(c.commitment));
-      if (targets.length === 0) return;
+    if (
+      !validatePlayerTurn({
+        loading,
+        occ,
+        mode,
+        input,
+        nudgeUsed,
+        deadlineUsed,
+        chars,
+      }).ok
+    ) {
+      return;
     }
-    if (mode === "deadline" && deadlineUsed) return;
 
-    const pollWeeksAway = Math.max(0, weeksLeft ?? TOTAL_WEEKS);
-    const fallbackDates = getUpcomingDates({ weeksAway: pollWeeksAway });
-    const pickedDates = Array.from(
-      new Set(
-        pollDates
-          .map((iso) => formatIsoDateLabel(iso))
-          .filter(Boolean)
-      )
-    );
-    const dates = pickedDates.length > 0 ? pickedDates : fallbackDates;
-    const pollId = `p${Date.now()}`;
-    const pinLocation = mode === "pin" ? input.trim() || occ.venue : "";
-    let txt = "";
-    let pm = {};
-
-    if (mode === "pin") {
-      txt = `📍 ${occ.name} · ${pinLocation} · ${occ.note}`;
-      pm = { id: Date.now(), type: "player", text: `📍 ${pinLocation}`, action: "pin" };
-    } else if (mode === "poll") {
-      txt = `📅 Date poll for ${occ.name} — which weekend works?\n${dates.map((d, i) => `${i + 1}. ${d}`).join("\n")}`;
-      pm = {
-        id: Date.now(),
-        type: "player",
-        text: "Which date works for everyone?",
-        action: "poll",
-        isPoll: true,
-        pollId,
-        votes: Object.fromEntries(dates.map((d) => [d, []])),
-      };
-      const resetDates = getUpcomingDateInputs({ weeksAway: pollWeeksAway });
-      setPollDates([resetDates[0] || "", resetDates[1] || "", resetDates[2] || ""]);
-    } else if (mode === "nudge") {
-      const targets = chars.filter((c) => ["ghost", "unknown", "seen"].includes(c.commitment));
-      const names = targets.map((c) => c.name).join(", ");
-      txt = `🔔 Hey — just checking in. ${names ? `${names}, any thoughts?` : "Anyone?"}`;
-      pm = { id: Date.now(), type: "player", text: "🔔 Checking in on everyone...", action: "nudge" };
-    } else if (mode === "deadline") {
-      txt = `⏰ Need answers by end of this week — if I don't hear back I'll assume you're out.`;
-      pm = { id: Date.now(), type: "player", text: "⏰ Answer by end of this week or I'm releasing your spot.", action: "deadline" };
-    } else if (mode === "dm") {
-      const ch = chars.find((c) => c.id === dmTarget);
-      txt = input.trim();
-      pm = { id: Date.now(), type: "player", text: txt, action: "dm", dmTarget: ch?.name || "" };
-    } else {
-      txt = input.trim();
-      pm = { id: Date.now(), type: "player", text: txt, action: mode };
-    }
+    const { txt, playerMsg: pm, pollId, dates, pollDatesReset } = preparePlayerTurn({
+      mode,
+      occ,
+      input,
+      pollDates,
+      weeksLeft,
+      chars,
+      dmTarget,
+    });
+    if (pollDatesReset) setPollDates(pollDatesReset);
 
     setMsgs((p) => [...p, pm]);
     setInput("");
@@ -291,22 +265,7 @@ export function useGameState() {
         return;
       }
 
-      const hist = msgs
-        .filter((m) => m.type === "player" || m.type === "character")
-        .slice(-10)
-        .map((m) => `${m.sender || "You"}: ${m.text}`)
-        .join("\n");
-      const prompt = `Chat history:\n${hist || "(no messages yet)"}\n\nPlayer action (${mode}): "${txt}"\n${
-        dmChar ? `\nDM TARGET: Only ${dmChar.name} (id "${dmChar.id}") should respond. Nobody else.\n` : ""
-      }\nCurrent commitments: ${chars.map((c) => `${c.name}=${c.commitment}`).join(", ")}\n${
-        mode === "poll" ? `\nDate options in poll: ${dates.join(" | ")}\nCharacters should vote for which date(s) suit them.\n` : ""
-      }${
-        mode === "nudge"
-          ? `\nNUDGE TARGETS (ghost/unseen only): ${chars.filter((c) => ["ghost","unknown","seen"].includes(c.commitment)).map((c) => `${c.name} id:${c.id}`).join(", ") || "none"}. Follow the NUDGE hard requirements.\n`
-          : mode === "deadline"
-          ? "\nFollow the DEADLINE hard requirements in the system prompt (minimum 4 replies; force real commitment changes).\n"
-          : ""
-      }\nReturn JSON only.`;
+      const prompt = buildTurnPrompt({ msgs, txt, mode, dmChar, chars, dates });
 
       const ai = await sendTurn({
         occ,
@@ -320,11 +279,12 @@ export function useGameState() {
       });
       if (ai.narratorComment) setNarrator(ai.narratorComment);
 
-      if (mode === "deadline") {
-        const dlTargets = chars.filter((c) => ["ghost", "unknown", "seen"].includes(c.commitment));
-        setDeadlineWeek(weeksLeft);
-        setDeadlineTargetIds(dlTargets.map((c) => c.id));
-      }
+      scheduleAfterAi(mode, {
+        chars,
+        weeksLeft,
+        setDeadlineWeek,
+        setDeadlineTargetIds,
+      });
 
       let responseList = Array.isArray(ai.responses) ? ai.responses : [];
       if (mode === "dm") {
@@ -379,76 +339,8 @@ export function useGameState() {
         );
       }
 
-      if (mode === "nudge") {
-        setChars((prev) => {
-          const ghosts = prev.filter((c) => c.commitment === "ghost");
-          const pick = ghosts.slice(0, 2);
-          const idSet = new Set(pick.map((c) => c.id));
-          const names = [];
-          const next = prev.map((c) => {
-            if (!idSet.has(c.id)) return c;
-            if (Math.random() < 0.78) {
-              names.push(c.name);
-              return { ...c, commitment: "maybe" };
-            }
-            return c;
-          });
-          if (names.length) {
-            queueMicrotask(() =>
-              setMsgs((m) => [
-                ...m,
-                {
-                  id: `nudgefx${Date.now()}`,
-                  type: "system",
-                  text: `🔔 ${names.join(" & ")} surfaced after the nudge.`,
-                },
-              ])
-            );
-          }
-          return next;
-        });
-      }
-
-      if (mode === "deadline") {
-        setChars((prev) =>
-          prev.map((c) => {
-            const u = Math.random();
-            if (c.commitment === "maybe") {
-              if (u < 0.42) return { ...c, commitment: "yes" };
-              if (u < 0.68) return { ...c, commitment: "no" };
-              return c;
-            }
-            if (c.commitment === "unknown") {
-              if (u < 0.36) return { ...c, commitment: "maybe" };
-              if (u < 0.52) return { ...c, commitment: "yes" };
-              return c;
-            }
-            if (c.commitment === "seen") {
-              if (u < 0.44) return { ...c, commitment: "maybe" };
-              if (u < 0.58) return { ...c, commitment: "yes" };
-              return c;
-            }
-            return c;
-          })
-        );
-        setMsgs((p) => [
-          ...p,
-          {
-            id: `deadlinefx${Date.now()}`,
-            type: "system",
-            text: "⏰ The deadline shook loose a few actual answers.",
-          },
-        ]);
-      }
-
-      if (mode === "nudge") {
-        setNudgeUsed(true);
-        setMode("message");
-      }
-      if (mode === "deadline") {
-        setDeadlineUsed(true);
-        setMode("message");
-      }
+      runPostResponseDrama(mode, { setChars, setMsgs });
+      finalizeDisposableAction(mode, { setNudgeUsed, setDeadlineUsed, setMode });
 
       advanceWeekAndApplyFlakes(newStep);
     } catch (e) {

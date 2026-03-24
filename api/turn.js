@@ -1,4 +1,12 @@
 import { buildSys } from "../src/lib/promptBuilder.js";
+import {
+  checkRateLimit,
+  getClientIp,
+  parsePositiveInt,
+} from "../src/lib/serverRateLimit.js";
+
+const TURNS_PER_HOUR = () =>
+  parsePositiveInt(process.env.RATE_LIMIT_TURN_PER_HOUR, 80);
 
 function parseBody(req) {
   if (!req.body) return {};
@@ -22,6 +30,19 @@ export default async function handler(req, res) {
   if (!apiKey) {
     res.status(500).json({ error: "Missing ANTHROPIC_API_KEY" });
     return;
+  }
+
+  if (process.env.RATE_LIMIT_DISABLED !== "true") {
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(`turn:${ip}`, TURNS_PER_HOUR());
+    if (!rl.allowed) {
+      res.setHeader("Retry-After", String(rl.retryAfterSec));
+      res.status(429).json({
+        error: "Too many game turns from this network. Try again in a bit.",
+        retryAfterSec: rl.retryAfterSec,
+      });
+      return;
+    }
   }
 
   try {

@@ -41,8 +41,8 @@ export function assignSingleDmGhost(characters, seedKey) {
   return characters.map((c) => ({ ...c, ignoresDm: c.id === pickedId }));
 }
 
-/** In-game weeks that must elapse before the DM ghost answers DMs. */
-export const DM_IGNORE_UNTIL_WEEKS_ELAPSED = 3;
+/** In-game weeks that must elapse before the DM ghost answers DMs (tuned for 4-week runs). */
+export const DM_IGNORE_UNTIL_WEEKS_ELAPSED = 2;
 
 export function characterGhostingDm(dmTargetId, weeksLeft, totalWeeks, castChars) {
   const c = castChars?.find((x) => x.id === dmTargetId);

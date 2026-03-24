@@ -1,7 +1,7 @@
 import { DM_IGNORE_UNTIL_WEEKS_ELAPSED } from "../data/characters.js";
 
 export function buildSys(occ, chars, opts = {}) {
-  const { mode, dates, weeksLeft, totalWeeks = 7 } = opts;
+  const { mode, dates, weeksLeft, totalWeeks = 4 } = opts;
   const wl = weeksLeft ?? totalWeeks;
   const weeksElapsed = totalWeeks - wl;
   const dmStillGhostIds = chars
@@ -74,15 +74,17 @@ RESPONSE BEATS — pick ONE per character response. Vary beats across the conver
 - REACT-TO-PLAYER: respond directly to the specific action type (pin = "oh this is real", deadline = mild panic, nudge = sheepish resurface)
 Never use the same beat twice in a row for the same character.`;
 
-  return `You run "pretty please", a dry social simulation game set in London.
+  const setting = occ.editionSettingLine?.trim();
 
+  return `You run "pretty please", a dry social simulation game${setting ? "" : " set in London"}.
+${setting ? `SETTING: ${setting}\n` : ""}
 EVENT: ${occ.name} at ${occ.venue}
 TARGET: ${occ.target} people (range: ${occ.min}–${occ.max})
 CONTEXT: ${occ.note}
 
 ━━ CHARACTERS ━━
 ${chars.map((c) => {
-  const fp = fingerprints[c.id];
+  const fp = c.linguisticFingerprint ?? fingerprints[c.id];
   return `${c.name} (id:"${c.id}")
   Commitment: ${c.commitment}
   Last said: "${c.lastMsg || "nothing yet"}"

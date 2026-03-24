@@ -120,7 +120,7 @@ const Highlight = ({ children, color = "#FFF176", rotate = "-0.5deg" }) => (
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-const HOW_CLOCK = { e: "🗓️", k: "Clock", v: "7 weeks total — 4 steps per week" };
+const HOW_CLOCK = { e: "🗓️", k: "Calendar", v: "4 weeks total — 4 steps per week" };
 
 const HOW_GROUPS = [
   {
@@ -232,7 +232,7 @@ export function IntroScreen({ onStart, occasionOverride = null }) {
 
           <div style={{ marginTop: 12, textAlign: "right" }}>
             <p className="mansalva" style={{ color: "#7a6f64", fontSize: 14, margin: 0, letterSpacing: "0.3px" }}>
-              a game about the quiet misery of organising plans
+              a game daily for your quiet misery of organising
             </p>
           </div>
         </div>
@@ -382,7 +382,7 @@ export function IntroScreen({ onStart, occasionOverride = null }) {
 
         <div style={{ marginTop: 24, marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: 0.45 }}>
           <Squiggle color="#8696A0" />
-          <span className="mansalva" style={{ fontSize: 12, color: "#9a8e83" }}>made with slight exasperation</span>
+          <span className="mansalva" style={{ fontSize: 12, color: "#9a8e83" }}>if you know you know</span>
           <Star color="#FFB830" size={12} />
         </div>
 

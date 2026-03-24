@@ -1,35 +1,29 @@
 import { fetchResponses } from "./anthropic.js";
-import { pickOccasionForCalendarDay } from "../data/occasions.js";
-import { buildCastForOccasion } from "../hooks/useCast.js";
+import { getAuthoredEditionSync } from "../lib/authoredEditionsBrowser.js";
+import { normalizeAuthoredEdition } from "../lib/editionNormalize.js";
+import { buildDailyFallbackCast, getTodayIsoDateKey } from "../lib/proceduralCast.js";
 
 const USE_API_ROUTES = !import.meta.env.DEV || import.meta.env.VITE_USE_API_ROUTES === "true";
 
-function pickTodayOccasion() {
-  return pickOccasionForCalendarDay();
+function tryLocalAuthoredEdition(dateKey) {
+  const raw = getAuthoredEditionSync(dateKey);
+  if (!raw) return null;
+  const norm = normalizeAuthoredEdition(raw, dateKey);
+  return norm ? { ...norm, source: "local-authored" } : null;
 }
 
 export async function getTodayCast() {
+  const dateKey = getTodayIsoDateKey();
+
   if (!USE_API_ROUTES) {
-    const occasion = pickTodayOccasion();
-    return {
-      date: new Date().toISOString().slice(0, 10),
-      occasion,
-      characters: buildCastForOccasion(occasion),
-      source: "local-fallback",
-    };
+    return tryLocalAuthoredEdition(dateKey) ?? buildDailyFallbackCast(dateKey);
   }
   try {
     const res = await fetch("/api/cast");
     if (!res.ok) throw new Error(`cast endpoint failed: ${res.status}`);
     return await res.json();
   } catch {
-    const occasion = pickTodayOccasion();
-    return {
-      date: new Date().toISOString().slice(0, 10),
-      occasion,
-      characters: buildCastForOccasion(occasion),
-      source: "local-fallback",
-    };
+    return tryLocalAuthoredEdition(dateKey) ?? buildDailyFallbackCast(dateKey);
   }
 }
 
