@@ -57,21 +57,23 @@ export const ARCHETYPE_MILIEU_LANES = {
   ayo: ["gigs", "food"],
 };
 
-const MILIEU_TAIL = `The soft excuses that might be real — "I'm just really in a reading period at the moment"; "I've been trying to spend more time outside the algorithm"; "I'm doing this thing where I don't make plans more than 48 hours out"; "my body is telling me to slow down"; "I said I'd be somewhere but I don't know if I'm actually going"; "it's a long story but I can't do that weekend".
+const MILIEU_TAIL = `**Always-on busy signals** — weave these constantly, not as rare spice: soft excuses ("reading period", "outside the algorithm", "48hr rule", "body says slow down", "said I'd be somewhere idk if I'm going", "long story can't that weekend") and **especially** vague London lines — "thing in Peckham", "whole weekend's mad", "got people coming", "helping someone move", "it's complicated explain later", "one quiet weekend this month", "so overstretched" — often **more** believable than naming a venue.
 
-The vague ones (RICHEST FOR THIS GAME — use often) — busy with nothing they can name is more London than any specific commitment: "a thing in Peckham"; "this whole weekend is mad"; "I've got people coming"; "I said I'd help someone move"; "it's complicated, I'll explain later"; "I'm trying to have one weekend to myself this month"; "I've been so overstretched lately".
+Cast texture: gong bath vs squat party at 10pm pin — same person, different nights. Wellness / fashion / politics / virtue pulls can all show up across the cast.
 
-Cast texture: the gong bath and the squat party whose location drops at 10pm are two ends of the same person — many in this group are both. Mix wellness-coded, fashion-coded, earnestly political, and virtue-adjacent pulls without flattening anyone to one lane.
-
-Balance: mix concrete named pulls, soft-launch mystery, wellness absurdity, and suspicious vagueness. DEFLECT / REGRESS / CREATE-OBSTACLE love the vague category — evasive, relatable, slightly guilty.`;
+**Aggressive use:** CREATE-OBSTACLE and SEMI-COMMIT should usually name a **concrete** competing pull OR a **suspiciously vague** one — not "busy" with no face. DEFLECT / REGRESS without life texture reads like NPCs.`;
 
 const MILIEU_INTRO = `━━ LONDON / HIP CROWD (default milieu — voice texture) ━━
 Assume London unless SETTING above says otherwise. Young(ish), image-aware, Instagram/TikTok-literate — group chats, FOMO, half-planned weekends.
 
-Each turn only a SAMPLE of pull categories appears below (rotates). Everyone may still invent similar vibes. Per-character "Milieu lean" lines name their usual lanes even when a category isn't printed this turn — use those hints for obstacles. ONE short clause per in-character message — never dump the inventory.`;
+This city runs on **competing attention**: everyone is stretched. The chat is NOT a neutral planning bot — it's people who already have three other things that weekend.
 
-/** How many category paragraphs to inject per turn (rest come from leans + invention). */
-const SAMPLED_SECTION_COUNT = 4;
+**Push this hard:** Most character lines should **signal** a life outside this thread (sampled pulls below + each row's Milieu lean + vague/soft excuses in the tail). Plain logistics-only ("yeah Saturday", "need to lock time") without texture = wrong — fold in **at least one** clause of milieu, gripe, flake energy, or fingerprint attitude (two short clauses in one bubble is fine under the word cap).
+
+A SAMPLE of category paragraphs still rotates below (large slice each turn). Per-character "Milieu lean" always applies — use those hints even when a category isn't printed. Never paste the whole inventory into one message.`;
+
+/** How many category paragraphs to inject per turn — high so the model sees busy-London variety every time. */
+const SAMPLED_SECTION_COUNT = 8;
 
 function hashSeed(occasionId, turnStep) {
   const s = `${occasionId ?? "occ"}:${turnStep ?? 0}`;
@@ -128,5 +130,5 @@ export function milieuLeanLineForArchetype(archetypeId) {
     return "Milieu lean: general London hip chaos — vague excuses especially welcome.";
   }
   const hints = lanes.map((k) => MILIEU_LANE_HINTS[k]).filter(Boolean);
-  return `Milieu lean (${lanes.join(" + ")}): ${hints.join(" · ")} — vague / soft-excuse lines always allowed.`;
+  return `Milieu lean (${lanes.join(" + ")}): ${hints.join(" · ")} — reference this lane often in hedges/flakes; vague busy lines always fair game.`;
 }

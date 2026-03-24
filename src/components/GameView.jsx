@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { ChatMsg } from "./ChatMsg.jsx";
+import { totalHeadcountIncludingPlayer } from "../utils/scoring.js";
 
 const WA_GREEN    = "#25D366";
 const WA_HEADER   = "#075E54";
@@ -70,6 +71,8 @@ export function GameView({
 }) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 768px)").matches);
+
+  const headcountTotal = occ ? totalHeadcountIncludingPlayer(confirmed.length) : 0;
 
   useEffect(() => { if (isMobile) setPanelOpen(false); }, [isMobile]);
 
@@ -226,7 +229,7 @@ export function GameView({
               color: narrator.startsWith("🚫") ? "#3949AB" : "#667781",
               fontSize: narrator.startsWith("🚫") ? 12.5 : 11.5,
               fontStyle: "italic",
-              fontWeight: narrator.startsWith("🚫") ? 600 : 400,
+              fontWeight: 400,
             }}>
               {narrator.startsWith("🚫") ? narrator : `💬 ${narrator}`}
             </span>
@@ -573,24 +576,24 @@ export function GameView({
             <div style={{ display: "flex", justifyContent: "center", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
               <span style={{
                 fontSize: 36, fontWeight: 800, lineHeight: 1,
-                color: confirmed.length >= occ.min ? WA_GREEN : confirmed.length > 0 ? "#FFB830" : "#8696A0",
+                color: headcountTotal >= occ.min ? WA_GREEN : headcountTotal > 1 ? "#FFB830" : "#8696A0",
                 transition: "color 0.3s",
               }}>
-                {confirmed.length}
+                {headcountTotal}
               </span>
               <span style={{ color: "#8696A0", fontSize: 15 }}>/ {occ.target}</span>
             </div>
-            <div style={{ color: "#667781", fontSize: 11, textAlign: "center", marginBottom: 8 }}>said they&apos;re in (theoretically)</div>
+            <div style={{ color: "#667781", fontSize: 11, textAlign: "center", marginBottom: 8 }}>going incl. you (theoretically)</div>
             <div style={{ background: "#D9DEE3", borderRadius: 4, height: 4, overflow: "hidden" }}>
               <div style={{
                 background: WA_GREEN,
-                width: `${Math.min(100, (confirmed.length / occ.target) * 100)}%`,
+                width: `${Math.min(100, (headcountTotal / occ.target) * 100)}%`,
                 height: "100%", borderRadius: 4, transition: "width 0.5s ease",
               }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
               {maybeCount > 0 && <span style={{ color: "#FFB830", fontSize: 11 }}>+{maybeCount} maybe{maybeCount !== 1 ? "s" : ""}</span>}
-              <span style={{ color: "#8696A0", fontSize: 10, marginLeft: "auto" }}>need {occ.min}–{occ.max}</span>
+              <span style={{ color: "#8696A0", fontSize: 10, marginLeft: "auto" }}>total {occ.min}–{occ.max} incl. you</span>
             </div>
           </div>
 
@@ -647,10 +650,10 @@ export function GameView({
           <div style={{ color: "#667781", fontSize: 11.5, textAlign: "center", marginBottom: 8, lineHeight: 1.4 }}>
             {steps === 0
               ? "Send your first message to begin"
-              : confirmed.length < occ.min
-              ? `${occ.min - confirmed.length} more needed to lock in`
-              : confirmed.length > occ.max
-              ? `${confirmed.length - occ.max} too many — manage the excess`
+              : headcountTotal < occ.min
+              ? `${occ.min - headcountTotal} more needed (people total, incl. you) to lock in`
+              : headcountTotal > occ.max
+              ? `${headcountTotal - occ.max} over max headcount — manage the excess`
               : "You're in range — lock in?"}
           </div>
           <button

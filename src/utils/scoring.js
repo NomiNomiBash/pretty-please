@@ -1,4 +1,12 @@
 /**
+ * Headcount bands (min / max / target on occasions) are TOTAL people at the event,
+ * including the player (organiser). NPC firm yeses = total − 1.
+ */
+export function totalHeadcountIncludingPlayer(npcYesCount) {
+  return (npcYesCount ?? 0) + 1;
+}
+
+/**
  * How hard each occasion is to organise.
  * Tight slot (theatre: 0 slack) → 1.8× friction. Generous (party: 12 slack) → 1.0×.
  * Used to scale both week-advance flake rates and lock-in resolution.
@@ -13,6 +21,19 @@ export function occasionFrictionMultiplier(occ) {
  * Only `maybe` rows change; everything else is left as-is for scoring.
  * Tighter occasions (low slack) suppress the yes-probability at the last minute.
  */
+/** For "too many people" flavour copy — real cast names, not a fixed NPC. */
+function pickChaosBlameNames(confirmed) {
+  if (!confirmed?.length) {
+    return { plusOne: "Someone", dogWalker: "Someone" };
+  }
+  const preferPlusOne = ["ayo", "ollie", "hamish", "zara"];
+  const plusOneChar =
+    confirmed.find((c) => preferPlusOne.includes(c.id)) ?? confirmed[0];
+  const dogChar =
+    confirmed.find((c) => c.id !== plusOneChar.id) ?? plusOneChar;
+  return { plusOne: plusOneChar.name, dogWalker: dogChar.name };
+}
+
 export function resolveCommitmentsAtLockIn(chars, occ) {
   const mult = occasionFrictionMultiplier(occ);
   // yes: 0.38 on easy occasions, down toward 0.21 on tight ones
@@ -29,37 +50,44 @@ export function resolveCommitmentsAtLockIn(chars, occ) {
 }
 
 export function buildResult({ occ, confirmed, steps, personalBest }) {
-  const count = confirmed.length;
+  const npcYes = confirmed.length;
+  const total = totalHeadcountIncludingPlayer(npcYes);
   const { min, max, target } = occ;
 
-  if (count < min) {
+  const youChip = { name: "You", avatar: "👤" };
+  const npcAttendees = confirmed.map((c) => ({ name: c.name, avatar: c.avatar ?? "🧑" }));
+  const attendeesWithYou = [youChip, ...npcAttendees];
+
+  if (total < min) {
     return {
       result: {
         type: "loss",
-        title: count === 0 ? "💀 Zero. Not One Person." : "💀 Not Enough",
+        title: npcYes === 0 ? "💀 Zero. Not One Person." : "💀 Not Enough",
         message:
-          count === 0
+          npcYes === 0
             ? "Absolute radio silence. You eat the full cost alone and pretend it never happened."
-            : `Only ${count} said yes — needed at least ${min}. You text everyone 'no worries! next time!' and stare at the ceiling.`,
-        score: Math.round((count / min) * 40),
-        attendees:
-          count === 0
-            ? []
-            : confirmed.map((c) => ({ name: c.name, avatar: c.avatar ?? "🧑" })),
+            : `Only ${npcYes} in the chat said yes — ${total} people including you, but you need at least ${min} total. You text everyone 'no worries! next time!' and stare at the ceiling.`,
+        score: Math.round((total / min) * 40),
+        attendees: npcYes === 0 ? [youChip] : attendeesWithYou,
       },
       isNewBest: false,
       nextBest: personalBest,
     };
   }
 
-  if (count > max) {
+  if (total > max) {
+    const { plusOne, dogWalker } = pickChaosBlameNames(confirmed);
+    const dogLine =
+      plusOne === dogWalker
+        ? "Someone brings a dog."
+        : `${dogWalker} brings a dog.`;
     return {
       result: {
         type: "loss",
         title: "😬 Too Many People",
-        message: `${count} said yes. You only had room for ${max}. Hamish brings someone uninvited. Someone brings a dog. The vibe is irrevocably off.`,
-        score: Math.round((max / count) * 60),
-        attendees: confirmed.map((c) => ({ name: c.name, avatar: c.avatar ?? "🧑" })),
+        message: `${total} people including you — max was ${max}. ${plusOne} brings someone uninvited. ${dogLine} The vibe is irrevocably off.`,
+        score: Math.round((max / total) * 60),
+        attendees: attendeesWithYou,
       },
       isNewBest: false,
       nextBest: personalBest,
@@ -80,9 +108,9 @@ export function buildResult({ occ, confirmed, steps, personalBest }) {
     result: {
       type: "win",
       title: "🎉 It's Happening",
-      message: `${count}/${target} confirmed. The ${occ.name} is ON. Took ${steps} steps. ${efficiency}`,
-      score: Math.max(10, Math.min(100, 100 - steps * 2 + (count === target ? 20 : 0))),
-      attendees: confirmed.map((c) => ({ name: c.name, avatar: c.avatar ?? "🧑" })),
+      message: `${total}/${target} people locked in (including you). The ${occ.name} is ON. Took ${steps} steps. ${efficiency}`,
+      score: Math.max(10, Math.min(100, 100 - steps * 2 + (total === target ? 20 : 0))),
+      attendees: attendeesWithYou,
       isNewBest,
     },
     isNewBest,

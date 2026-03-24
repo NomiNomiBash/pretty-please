@@ -1,3 +1,4 @@
+/** min / max / target = total people at the event, including the player (organiser). */
 export const OCCASIONS = [
   { id: "dinner", name: "Birthday Dinner", emoji: "🎂", venue: "Bao Borough Market", target: 8, min: 6, max: 10, note: "Table for 8. Won't seat fewer than 6. More than 10 and they split you up, which completely ruins the vibe." },
   { id: "brunch", name: "Bottomless Brunch", emoji: "🥂", venue: "HIDE, Piccadilly", target: 5, min: 4, max: 7, note: "Pay upfront per head. 4–7 people only. Every flake costs real money. This one is remarkably personal." },

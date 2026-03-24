@@ -2,6 +2,7 @@
  * After the model returns: mode-specific mechanical drama (group dynamics).
  * Extend this file when you add a new player action — wire a handler in `POST_RESPONSE_DRAMA` or `AFTER_AI_SCHEDULERS`.
  */
+import { appendSystemMsgsOnce, runSetCharsTransitionOnce } from "../reactStrictModeDedupe.js";
 
 /** Runs once we have `ai` but before character messages are streamed (e.g. deadline tracking). */
 export function scheduleAfterAi(mode, { chars, weeksLeft, setDeadlineWeek, setDeadlineTargetIds }) {
@@ -11,10 +12,13 @@ export function scheduleAfterAi(mode, { chars, weeksLeft, setDeadlineWeek, setDe
   setDeadlineTargetIds(dlTargets.map((c) => c.id));
 }
 
-/** Runs after all character bubbles for this turn are applied. */
-export function runPostResponseDrama(mode, { setChars, setMsgs }) {
+/**
+ * Runs after all character bubbles for this turn are applied.
+ * @param {{ setChars: Function, setMsgs: Function, turnStep: number }} ctx — turnStep dedupes Strict Mode double updates
+ */
+export function runPostResponseDrama(mode, { setChars, setMsgs, turnStep }) {
   const runner = POST_RESPONSE_DRAMA[mode];
-  if (runner) runner({ setChars, setMsgs });
+  if (runner) runner({ setChars, setMsgs, turnStep });
 }
 
 const POST_RESPONSE_DRAMA = {
@@ -27,8 +31,9 @@ const POST_RESPONSE_DRAMA = {
   dm: () => {},
 };
 
-function runNudgeRecoveryDrama({ setChars, setMsgs }) {
-  setChars((prev) => {
+function runNudgeRecoveryDrama({ setChars, setMsgs, turnStep }) {
+  const step = turnStep ?? 0;
+  runSetCharsTransitionOnce(`nudge-${step}`, setChars, (prev) => {
     const ghosts = prev.filter((c) => c.commitment === "ghost");
     const pick = ghosts.slice(0, 2);
     const idSet = new Set(pick.map((c) => c.id));
@@ -41,25 +46,29 @@ function runNudgeRecoveryDrama({ setChars, setMsgs }) {
       }
       return c;
     });
-    if (names.length) {
-      queueMicrotask(() =>
-        setMsgs((m) => [
-          ...m,
-          {
-            id: `nudgefx${Date.now()}`,
-            type: "system",
-            text: `🔔 ${names.join(" & ")} surfaced after the nudge.`,
-          },
-        ])
-      );
-    }
-    return next;
+    const msgId = `nudge-surface-${step}`;
+    return {
+      nextChars: next,
+      enqueue:
+        names.length > 0
+          ? () =>
+              appendSystemMsgsOnce(setMsgs, msgId, [
+                {
+                  id: msgId,
+                  type: "system",
+                  text: `🔔 ${names.join(" & ")} surfaced after the nudge.`,
+                },
+              ])
+          : undefined,
+    };
   });
 }
 
-function runDeadlinePressureDrama({ setChars, setMsgs }) {
-  setChars((prev) =>
-    prev.map((c) => {
+function runDeadlinePressureDrama({ setChars, setMsgs, turnStep }) {
+  const step = turnStep ?? 0;
+  const msgId = `deadline-shook-${step}`;
+  runSetCharsTransitionOnce(`deadline-${step}`, setChars, (prev) => {
+    const next = prev.map((c) => {
       const u = Math.random();
       if (c.commitment === "maybe") {
         if (u < 0.42) return { ...c, commitment: "yes" };
@@ -77,16 +86,19 @@ function runDeadlinePressureDrama({ setChars, setMsgs }) {
         return c;
       }
       return c;
-    })
-  );
-  setMsgs((p) => [
-    ...p,
-    {
-      id: `deadlinefx${Date.now()}`,
-      type: "system",
-      text: "⏰ The deadline shook loose a few actual answers.",
-    },
-  ]);
+    });
+    return {
+      nextChars: next,
+      enqueue: () =>
+        appendSystemMsgsOnce(setMsgs, msgId, [
+          {
+            id: msgId,
+            type: "system",
+            text: "⏰ The deadline shook loose a few actual answers.",
+          },
+        ]),
+    };
+  });
 }
 
 /** Nudge / deadline are one-shot tools — reset UI mode after success. */

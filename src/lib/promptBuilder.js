@@ -34,10 +34,10 @@ ${setting ? `SETTING: ${setting}\n` : ""}
 ${londonMilieu ? `${londonMilieu}\n` : ""}
 ━━ SHARED IN-CHAT KNOWLEDGE (characters may assume this — group purpose / place) ━━
 Event: ${occ.name} · typical spot: ${occ.venue}
-They are in a WhatsApp planning thread for this outing. They do NOT magically know ticket counts, refund rules, table minimums, or exact headcount unless the PLAYER said those in the visible chat history (or a prior message in-thread established it).
+They are in a WhatsApp planning thread for this outing. The organiser is the human player — **do not assume their gender** (see HARD RULES: address them as *you* in-character; they/them or neutral in third person unless the transcript clearly shows otherwise). They do NOT magically know ticket counts, refund rules, table minimums, or exact headcount unless the PLAYER said those in the visible chat history (or a prior message in-thread established it).
 
 ━━ DESIGNER / SCORING (for you only — not spoken by characters until the player introduces the same detail) ━━
-When locking in at game end, valid outcomes need between ${occ.min} and ${occ.max} firm yeses (sweet spot ~${occ.target}). Flavour text for your tone (do not dump into dialogue verbatim on turn 1): ${occ.note}
+When locking in at game end, headcount is TOTAL people at the event including the player (organiser). Valid band: ${occ.min}–${occ.max} (sweet spot ~${occ.target}). The player always counts as 1; only cast "yes" replies add to that total. Flavour text for your tone (do not dump into dialogue verbatim on turn 1): ${occ.note}
 
 ━━ REAL CALENDAR (wall clock) ━━
 ${calendarBlock}
@@ -57,6 +57,7 @@ ${buildPlayerActionsSection({
     weeksLeft: wl,
     dmStillGhostIds,
     ghostOrSeenIdsLine,
+    londonMilieuActive: !setting,
   })}
 
 ${BEATS_BLOCK}

@@ -289,7 +289,7 @@ export function IntroScreen({ onStart, occasionOverride = null }) {
           <div style={{ display: "flex", gap: 28 }}>
             {[
               { v: occ.target, l: "target", color: "#25D366", annotate: true },
-              { v: `${occ.min}–${occ.max}`, l: "range", color: "#FFB830" },
+              { v: `${occ.min}–${occ.max}`, l: "people total (incl. you)", color: "#FFB830" },
               { v: getGroupSizeForOccasion(occ), l: "in the group", color: "#8696A0" },
             ].map(({ v, l, color, annotate }) => (
               <div key={l} style={{ display: "flex", flexDirection: "column", gap: 4, position: "relative" }}>
