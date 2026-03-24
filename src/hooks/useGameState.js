@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getUpcomingDateInputs } from "../lib/dates.js";
 import { fetchPlaceSuggestions, sendTurn, postResult } from "../api/gameApi.js";
 import { buildCastForOccasion } from "../lib/proceduralCast.js";
-import { buildResult, resolveCommitmentsAtLockIn } from "../utils/scoring.js";
+import { buildResult, resolveCommitmentsAtLockIn, occasionFrictionMultiplier } from "../utils/scoring.js";
 import { assignSingleDmGhost, characterGhostingDm } from "../data/characters.js";
 import { attachCloseTies } from "../data/characterTies.js";
 import {
@@ -176,7 +176,11 @@ export function useGameState() {
         return { ...c, commitment: "ghost" };
       }
 
-      const chance = FLAKE_CHANCE[c.id] ?? 0.12;
+      const baseChance = FLAKE_CHANCE[c.id] ?? 0.12;
+      const friction = occasionFrictionMultiplier(occ);
+      // Later weeks push flakiness higher: +5% per elapsed week
+      const weekPressure = (TOTAL_WEEKS - (weeksLeft ?? TOTAL_WEEKS)) * 0.05;
+      const chance = Math.min(0.65, baseChance * friction + weekPressure);
       if (c.commitment === "yes" && Math.random() < chance) {
         flakeSystemMsgs.push({
           id: `flake${Date.now()}${c.id}`,
@@ -185,7 +189,7 @@ export function useGameState() {
         });
         return { ...c, commitment: "maybe" };
       }
-      if (c.commitment === "maybe" && Math.random() < chance * 0.6) {
+      if (c.commitment === "maybe" && Math.random() < chance * 0.75) {
         flakeSystemMsgs.push({
           id: `ghost${Date.now()}${c.id}`,
           type: "system",
@@ -365,7 +369,7 @@ export function useGameState() {
 
   const handleLockIn = () => {
     if (!occ) return;
-    const resolved = resolveCommitmentsAtLockIn(chars);
+    const resolved = resolveCommitmentsAtLockIn(chars, occ);
     const confirmedResolved = resolved.filter((c) => c.commitment === "yes");
     const payload = buildResult({ occ, confirmed: confirmedResolved, steps, personalBest });
 

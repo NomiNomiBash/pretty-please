@@ -1,4 +1,5 @@
 import { DM_IGNORE_UNTIL_WEEKS_ELAPSED } from "../data/characters.js";
+import { ARCHETYPE_LINGUISTIC_FINGERPRINTS } from "../data/characterSigns.js";
 import { getCalendarAnchorBlock } from "./dates.js";
 
 export function buildSys(occ, chars, opts = {}) {
@@ -35,47 +36,27 @@ DEADLINE (hard requirements):
 - Mix: some panic-commit, some hard bail ("can't do it"), one person ignores the deadline entirely (omit them from responses).
 - NarratorComment should mention time running out or denial.`
       : "";
-  const fingerprints = {
-    tom: `MAX 6 words per message. No punctuation except "." at end sometimes. No emoji ever. Dry, flat.
-NEVER starts with a name or greeting. Examples: "yeah maybe" / "dunno yet" / "could do."`,
-    priya: `Starts enthusiastic, ends with a hedge. !! then a "but". omg/tbh. Max ~14 words per bubble.
-Example: "omg yes!! tbh might depend on work 😬"`,
-    ollie: `ALL CAPS on random words. 2–4 emojis. Chaotic. Max ~14 words per bubble.
-Example: "WAIT this could be SO good 🔥 tentatively in 🫡"`,
-    zara: `Zone/tube melodrama every time. Theatrical, not a project manager. Max ~16 words.
-Example: "zone 3 on a school night is giving grief 💔"`,
-    hamish: `1–3 words only. Scottish: aye, nae, och, grand. Never explains.`,
-    marcus: `Formal, zero emoji. ONE tight question OR one dry observation — not both in the same bubble. Max ~20 words.
-Never sounds like Remi (spreadsheet) or Cass (hype). Example: "How many are we locking in?"`,
-    jade: `lowkey, vibe, trails off "...". Aesthetic hedges NOT headcount. Max ~14 words.
-Example: "lowkey the vibe is a lot but i'm not mad at it"`,
-    nadia: `Wellness excuses (sound bath, breathwork). Max ~16 words.
-Example: "in theory yes 🌿 breathwork til 9 tho"`,
-    remi: `ONLY archetype allowed to do spreadsheet/headcount/dietary — and sparingly (not every turn). Max ~18 words when organising.
-Often deflect with "will check later" instead of interrogating.`,
-    callum: `Shoot/creative-meeting excuses. Film jargon. Short. Max ~14 words.
-Example: "wrap might run late, pencil me"`,
-    theo: `Ellie reference every message. Wishy-washy. Max ~12 words.
-Example: "need to check w ellie — she said something about that weekend"`,
-    bex: `Warm, rapid-fire. Prefer 2–3 TINY strings (≤6 words each) OR one ≤12 word line.
-Example: "oh WAIT" / "can i bring dan??"`,
-    saskia: `Corporate-casual. Vague. Max ~14 words.
-Example: "might have a conflict — will circle back"`,
-    ayo: `Wants to plus-one. Connector. Max ~14 words.
-Example: "i'm in — weird if i bring joel?"`,
-  };
+  const weekPressureGuidance =
+    weeksElapsed === 0
+      ? `WEEK PRESSURE: Game just started. Characters are curious but guarded — lean DEFLECT / CREATE-OBSTACLE / SEMI-COMMIT. Very few should be on "yes" yet. "Unknown" and "seen" are the honest default.`
+      : weeksElapsed === 1
+      ? `WEEK PRESSURE: One week gone. Enthusiasm has cooled slightly. New conditions start appearing. SEMI-COMMIT beats are fine but at least half the batch should be hedging or regretting. A "yes" can exist but must feel earned.`
+      : weeksElapsed >= 2
+      ? `WEEK PRESSURE: ${weeksElapsed} weeks in — people are flakey now. REGRESS and CONDITION-SHIFT are the dominant beats. Anyone who was "yes" before is statistically reconsidering. Freshly introduced obstacles are normal. Silence (no response) is also fine.`
+      : "";
 
   const BEATS = `
 RESPONSE BEATS — pick ONE per character response. Vary beats across the conversation:
 - DEFLECT: sidestep commitment, introduce new obstacle
 - SEMI-COMMIT: lean in but add a caveat that keeps them on the hook
 - CREATE-OBSTACLE: surface a specific logistical problem (not just "busy")
+- CONDITION-SHIFT: was apparently fine before, now introduces a NEW requirement or constraint that wasn't there last time (different day, needs to bring someone, venue concern, timing clash)
 - REFERENCE-SOMEONE: react to or drag in another character by name
 - INNER-CIRCLE-PING: agree with, gently push back on, or finish the thought of someone in your inner circle (listed on your character line). Sounds like a real group text, not a roast.
-- REGRESS: walk back a previous yes/maybe (London is London)
+- REGRESS: walk back a previous yes/maybe (London is London). Use freely — a yes is never permanent.
 - REACT-TO-PLAYER: respond directly to the specific action type (pin = "oh this is real", deadline = mild panic, nudge = sheepish resurface)
 - ANCHOR-DETAIL: player named something specific (show, place, title). One short clause of acknowledgement — then STOP or pivot to vibe; do not stack logistics on top unless your fingerprint IS the organiser type.
-Never use the same beat twice in a row for the same character.`;
+Beat frequency guidance: DEFLECT, SEMI-COMMIT, CREATE-OBSTACLE, CONDITION-SHIFT, REGRESS should dominate overall. REACT-TO-PLAYER only on relevant action types. Avoid repeating the same beat for the same character back-to-back.`;
 
   const setting = occ.editionSettingLine?.trim();
 
@@ -92,9 +73,14 @@ When locking in at game end, valid outcomes need between ${occ.min} and ${occ.ma
 ${calendarBlock}
 IN-GAME COUNTDOWN (simulation only — not the same as wall-clock dates above): ${wl} week(s) left until event week in the story.
 
-━━ CHARACTERS ━━
+━━ CHARACTERS (natal chart spine) ━━
+Astrology shorthand for this game: ♀️ Venus = HOW they text (warmth, brevity, performance, hedging style). ☀️ Sun = WHAT they are underneath — core motive, boundaries, what they're protecting or chasing. Let both show; when they fight, that's the character.
+Doubles (Hamish Sag/Sag, Nadia Aqua/Aqua) stack the same flavour on both layers.
 ${chars.map((c) => {
-  const fp = c.linguisticFingerprint ?? fingerprints[c.id];
+  const fp =
+    c.linguisticFingerprint ??
+    ARCHETYPE_LINGUISTIC_FINGERPRINTS[c.id] ??
+    "Casual WhatsApp: max ~12 words, guarded, not eager to solve the whole plan.";
   const inner =
     Array.isArray(c.closeWith) && c.closeWith.length > 0
       ? c.closeWith.map((x) => (typeof x === "object" && x?.name ? x.name : x)).join(", ")
@@ -103,11 +89,14 @@ ${chars.map((c) => {
   Commitment: ${c.commitment}
   Last said: "${c.lastMsg || "nothing yet"}"
   Inner circle (prefer @-ing them, agreeing, or nudging — not every message): ${inner}
-  Linguistic fingerprint: ${fp ?? "Casual WhatsApp: max ~12 words, no essay, distinct from Marcus/Remi planner voice."}`;
+  Linguistic fingerprint: ${fp}`;
 }).join("\n\n")}
+
+${weekPressureGuidance}
 
 ━━ PLAYER ACTIONS ━━
 message   → 1–2 characters reply. Not everyone. Silence is realistic.
+            Default commitment output is "unknown", "seen", or "maybe" — not "yes". A "yes" should feel like a small victory for the player, not a default.
             Read the player's line in the user message: if they named a real-world anchor (place, show, restaurant, title), at least ONE response in this batch should use beat ANCHOR-DETAIL for that anchor.
             When several characters speak, at least one pair can interact: INNER-CIRCLE-PING or REFERENCE-SOMEONE toward someone who also speaks this turn or who spoke last — especially along inner-circle lines.
 poll      → characters react to specific dates. Some clash, some are suspiciously free. CRITICAL: their message text must match their pollVotes exactly — if they say "Saturday works", pollVotes must include that Saturday.
@@ -127,9 +116,10 @@ ${BEATS}
 - BREVITY (non-negotiable): Each string in "messages" must be SHORT. Default hard cap ~16 words per string. Tom/Hamish stricter per fingerprint. Marcus max ~20. Never more than 2 strings in "messages" unless fingerprint is Bex-style — and then each string is tiny.
 - WhatsApp register only. No paragraphs. No multi-sentence essays. If you're typing a second sentence, delete it unless you're Marcus and still under the word cap.
 - VOICES: Not everyone is the organiser. In each batch, at most ONE response may do heavy logistics (headcount, spreadsheet, "confirm the four", non-refundable calculus). Everyone else must sound like their fingerprint — vibe, gripe, hype, dodge, tangent — NOT a copy of Remi/Marcus.
-- Fingerprints override everything — Tom never uses emoji, Hamish never exceeds 3 words, etc.
+- Chart / fingerprint override everything — Venus shapes the message surface; Sun shapes what they're actually doing (avoiding, committing, protecting Ellie, etc.). Doubles = same sign on both. Tom never uses emoji, Hamish never exceeds 3 words, etc.
 - "Last said" is what they said previously — their next message must differ in structure and opener.
-- Characters can and should regress. A yes is never safe.
+- Characters WILL regress. A yes is never permanent. CONDITION-SHIFT is normal at any stage — was fine with Saturday, now needs to "check something". People introduce new constraints as time passes.
+- "yes" is rare and earned. Most unsolicited turns should leave people at unknown/seen/maybe. Characters who jump straight to yes without being specifically asked or nudged are unrealistic.
 - Characters reference each other by name naturally when it fits — not every line needs an @.
 - Inner-circle is spice, not a second meeting agenda.
 - NO TELEPATHY: Never state exact headcounts ("the four", "we need 6"), refund rules, or ticket mechanics from DESIGNER/SCORING until the PLAYER has said them in the chat transcript. Until then, vague ("how many we thinking?") is fine; invented specific numbers is not.
