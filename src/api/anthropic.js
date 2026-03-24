@@ -33,7 +33,7 @@ function parseAiJson(rawText) {
   throw new Error("AI response was not valid JSON");
 }
 
-export async function fetchResponses({ occ, chars, mode, dmTarget, prompt, dates, weeksLeft, totalWeeks }) {
+export async function fetchResponses({ occ, chars, mode, dmTarget, prompt, dates, weeksLeft, totalWeeks, turnStep }) {
   if (!API_KEY) {
     throw new Error("Missing VITE_ANTHROPIC_API_KEY for client-side fallback");
   }
@@ -49,7 +49,7 @@ export async function fetchResponses({ occ, chars, mode, dmTarget, prompt, dates
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
       max_tokens: 1000,
-      system: buildSys(occ, chars, { mode, dates, weeksLeft, totalWeeks }),
+      system: buildSys(occ, chars, { mode, dates, weeksLeft, totalWeeks, turnStep }),
       messages: [{ role: "user", content: prompt }],
     }),
   });

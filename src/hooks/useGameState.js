@@ -15,6 +15,7 @@ import {
   runPostResponseDrama,
   finalizeDisposableAction,
 } from "../lib/playerTurn/index.js";
+import { removeCharacterFromPollVotes } from "../lib/pollMessageUtils.js";
 
 const FLAKE_CHANCE = {
   ollie: 0.3,
@@ -47,6 +48,66 @@ const FLAKE_MSGS_GHOST = [
 
 function pickFlakeMsg(arr, name) {
   return arr[Math.floor(Math.random() * arr.length)](name);
+}
+
+/** Max system flake lines when the in-game week ticks — keeps the chat from dumping five at once. */
+const MAX_BOUNDARY_FLAKES = 3;
+
+/**
+ * Deadline enforcement + capped random flakes. Uses current cast snapshot (functional setState safe).
+ */
+function applyWeeklyFlakeTransition(prevChars, { newWeeksLeft, occ, deadlineWeek, deadlineTargetIds }) {
+  const deadlineMsgs = [];
+  let working = prevChars.map((c) => {
+    if (
+      deadlineWeek !== null &&
+      newWeeksLeft < deadlineWeek &&
+      deadlineTargetIds.includes(c.id) &&
+      ["unknown", "seen"].includes(c.commitment)
+    ) {
+      deadlineMsgs.push({
+        id: `dl${Date.now()}-${c.id}`,
+        type: "system",
+        text: `⏰ ${c.name} missed the deadline. Spot released.`,
+      });
+      return { ...c, commitment: "ghost" };
+    }
+    return c;
+  });
+
+  const friction = occasionFrictionMultiplier(occ);
+  const weeksElapsedAfter = TOTAL_WEEKS - newWeeksLeft;
+  const weekPressure = Math.min(0.075, weeksElapsedAfter * 0.018);
+
+  const order = working.map((_, i) => i).sort(() => Math.random() - 0.5);
+  const transitions = [];
+  for (const i of order) {
+    if (transitions.length >= MAX_BOUNDARY_FLAKES) break;
+    const c = working[i];
+    const baseChance = FLAKE_CHANCE[c.id] ?? 0.12;
+    const chance = Math.min(0.4, baseChance * friction + weekPressure);
+    if (c.commitment === "yes" && Math.random() < chance) {
+      transitions.push({ id: c.id, to: "maybe" });
+    } else if (c.commitment === "maybe" && Math.random() < chance * 0.68) {
+      transitions.push({ id: c.id, to: "ghost" });
+    }
+  }
+
+  const transById = new Map(transitions.map((t) => [t.id, t]));
+  const flakeSystemMsgs = [];
+  working = working.map((c) => {
+    const t = transById.get(c.id);
+    if (!t) return c;
+    const msgFn = t.to === "maybe" ? FLAKE_MSGS_MAYBE : FLAKE_MSGS_GHOST;
+    flakeSystemMsgs.push({
+      id: `flake${Date.now()}-${c.id}`,
+      type: "system",
+      text: pickFlakeMsg(msgFn, c.name),
+    });
+    return { ...c, commitment: t.to };
+  });
+
+  return { nextChars: working, deadlineMsgs, flakeSystemMsgs };
 }
 
 const DM_SILENT_SYSTEM = [
@@ -150,74 +211,74 @@ export function useGameState() {
     setPhase("playing");
   };
 
+  /** One-off commitment wobble on ordinary turns so drama isn't bunched on week ticks. */
+  const applyMidWeekFlake = (newStep) => {
+    if (!occ || newStep % STEPS_PER_WEEK === 0) return;
+    if (weeksLeft === null || weeksLeft <= 0) return;
+    const friction = occasionFrictionMultiplier(occ);
+    if (Math.random() >= 0.14 * Math.min(1.15, friction)) return;
+
+    setChars((prev) => {
+      const yeses = prev.filter((c) => c.commitment === "yes");
+      const maybes = prev.filter((c) => c.commitment === "maybe");
+      const pool = [
+        ...yeses.map((c) => ({ c, next: "maybe" })),
+        ...maybes.map((c) => ({ c, next: "ghost" })),
+      ];
+      if (pool.length === 0) return prev;
+
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      const base = FLAKE_CHANCE[pick.c.id] ?? 0.12;
+      if (Math.random() >= Math.min(0.52, base * friction + 0.05)) return prev;
+
+      const text =
+        pick.next === "maybe"
+          ? pickFlakeMsg(FLAKE_MSGS_MAYBE, pick.c.name)
+          : pickFlakeMsg(FLAKE_MSGS_GHOST, pick.c.name);
+      queueMicrotask(() =>
+        setMsgs((m) => [...m, { id: `midwobble${Date.now()}`, type: "system", text }])
+      );
+      return prev.map((x) => (x.id === pick.c.id ? { ...x, commitment: pick.next } : x));
+    });
+  };
+
   const advanceWeekAndApplyFlakes = (newStep) => {
     if (newStep % STEPS_PER_WEEK !== 0 || weeksLeft === null || weeksLeft <= 0) return;
 
     const newWeeksLeft = weeksLeft - 1;
     setWeeksLeft(newWeeksLeft);
 
-    const flakeSystemMsgs = [];
-    const deadlineMsgs = [];
+    const weekLabel =
+      newWeeksLeft === 0
+        ? "📆 Event week is here."
+        : newWeeksLeft === 1
+          ? "📆 Final week."
+          : `📆 ${newWeeksLeft} weeks to go.`;
 
-    const updated = chars.map((c) => {
-      // Deadline enforcement: if a deadline was set this week, anyone who still
-      // hasn't answered gets dropped to ghost.
-      if (
-        deadlineWeek !== null &&
-        newWeeksLeft < deadlineWeek &&
-        deadlineTargetIds.includes(c.id) &&
-        ["unknown", "seen"].includes(c.commitment)
-      ) {
-        deadlineMsgs.push({
-          id: `dl${Date.now()}${c.id}`,
-          type: "system",
-          text: `⏰ ${c.name} missed the deadline. Spot released.`,
-        });
-        return { ...c, commitment: "ghost" };
-      }
+    setChars((prevChars) => {
+      const { nextChars, deadlineMsgs, flakeSystemMsgs } = applyWeeklyFlakeTransition(prevChars, {
+        newWeeksLeft,
+        occ,
+        deadlineWeek,
+        deadlineTargetIds,
+      });
 
-      const baseChance = FLAKE_CHANCE[c.id] ?? 0.12;
-      const friction = occasionFrictionMultiplier(occ);
-      // Later weeks push flakiness higher: +5% per elapsed week
-      const weekPressure = (TOTAL_WEEKS - (weeksLeft ?? TOTAL_WEEKS)) * 0.05;
-      const chance = Math.min(0.65, baseChance * friction + weekPressure);
-      if (c.commitment === "yes" && Math.random() < chance) {
-        flakeSystemMsgs.push({
-          id: `flake${Date.now()}${c.id}`,
-          type: "system",
-          text: pickFlakeMsg(FLAKE_MSGS_MAYBE, c.name),
-        });
-        return { ...c, commitment: "maybe" };
-      }
-      if (c.commitment === "maybe" && Math.random() < chance * 0.75) {
-        flakeSystemMsgs.push({
-          id: `ghost${Date.now()}${c.id}`,
-          type: "system",
-          text: pickFlakeMsg(FLAKE_MSGS_GHOST, c.name),
-        });
-        return { ...c, commitment: "ghost" };
-      }
-      return c;
+      queueMicrotask(() => {
+        setMsgs((p) => [
+          ...p,
+          { id: `week${Date.now()}`, type: "system", text: weekLabel },
+          ...deadlineMsgs,
+          ...flakeSystemMsgs,
+        ]);
+      });
+
+      return nextChars;
     });
 
     if (deadlineWeek !== null && newWeeksLeft < deadlineWeek) {
       setDeadlineWeek(null);
       setDeadlineTargetIds([]);
     }
-
-    const weekLabel =
-      newWeeksLeft === 0
-        ? "📆 Event week is here."
-        : newWeeksLeft === 1
-        ? "📆 Final week."
-        : `📆 ${newWeeksLeft} weeks to go.`;
-    setChars(updated);
-    setMsgs((p) => [
-      ...p,
-      { id: `week${Date.now()}`, type: "system", text: weekLabel },
-      ...deadlineMsgs,
-      ...flakeSystemMsgs,
-    ]);
   };
 
   const handleSend = async () => {
@@ -269,6 +330,7 @@ export function useGameState() {
           },
         ]);
         setNarrator(`🚫 ${pickLine(DM_SILENT_NARRATOR)}`);
+        applyMidWeekFlake(newStep);
         advanceWeekAndApplyFlakes(newStep);
         setMode("message");
         return;
@@ -285,6 +347,7 @@ export function useGameState() {
         dates,
         weeksLeft,
         totalWeeks: TOTAL_WEEKS,
+        turnStep: newStep,
       });
       if (ai.narratorComment) setNarrator(ai.narratorComment);
 
@@ -346,11 +409,26 @@ export function useGameState() {
         setChars((p) =>
           p.map((c) => (c.id === r.characterId ? { ...c, commitment: r.commitment, lastMsg: lastText } : c))
         );
+
+        if (mode !== "poll") {
+          const explicit =
+            Array.isArray(r.removePollVotes) ? r.removePollVotes.filter((x) => typeof x === "string" && x.trim()) : [];
+          const hardBail = r.commitment === "no" || r.commitment === "ghost";
+          if (hardBail || explicit.length > 0) {
+            setMsgs((p) =>
+              removeCharacterFromPollVotes(p, ch.name, {
+                allDates: hardBail,
+                dateKeys: explicit,
+              })
+            );
+          }
+        }
       }
 
       runPostResponseDrama(mode, { setChars, setMsgs });
       finalizeDisposableAction(mode, { setNudgeUsed, setDeadlineUsed, setMode });
 
+      applyMidWeekFlake(newStep);
       advanceWeekAndApplyFlakes(newStep);
       setMode("message");
     } catch (e) {

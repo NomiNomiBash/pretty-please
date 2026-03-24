@@ -1,3 +1,5 @@
+import { getLatestPollOptionStrings } from "../pollMessageUtils.js";
+
 /**
  * User → model: history + action + mode-specific instructions (drama levers live in promptBuilder + here).
  */
@@ -26,7 +28,15 @@ export function buildTurnPrompt({ msgs, txt, mode, dmChar, chars, dates }) {
       ? "\nFollow the DEADLINE hard requirements in the system prompt (minimum 4 replies; force real commitment changes).\n"
       : "";
 
+  const pollOpts = mode === "poll" ? [] : getLatestPollOptionStrings(msgs);
+  const pollRetreatBlock =
+    pollOpts.length > 0
+      ? `\nLive date poll in this thread — exact option strings (use in removePollVotes if someone retracts a date): ${pollOpts.join(
+          " | "
+        )}\n`
+      : "";
+
   return `Chat history:\n${hist || "(no messages yet)"}\n\nPlayer action (${mode}): "${txt}"\n${
     dmChar ? `\nDM TARGET: Only ${dmChar.name} (id "${dmChar.id}") should respond. Nobody else.\n` : ""
-  }\nCurrent commitments: ${chars.map((c) => `${c.name}=${c.commitment}`).join(", ")}\n${pollBlock}${nudgeBlock}${deadlineBlock}\nReturn JSON only.`;
+  }\nCurrent commitments: ${chars.map((c) => `${c.name}=${c.commitment}`).join(", ")}\n${pollBlock}${pollRetreatBlock}${nudgeBlock}${deadlineBlock}\nReturn JSON only.`;
 }
