@@ -24,9 +24,12 @@ export function buildResult({ occ, confirmed, steps, personalBest }) {
         message:
           count === 0
             ? "Absolute radio silence. You eat the full cost alone and pretend it never happened."
-            : `Only ${count} confirmed. Needed at least ${min}. You text everyone 'no worries! next time!' and stare at the ceiling.`,
+            : `Only ${count} said yes — needed at least ${min}. You text everyone 'no worries! next time!' and stare at the ceiling.`,
         score: Math.round((count / min) * 40),
-        attendees: [],
+        attendees:
+          count === 0
+            ? []
+            : confirmed.map((c) => ({ name: c.name, avatar: c.avatar ?? "🧑" })),
       },
       isNewBest: false,
       nextBest: personalBest,

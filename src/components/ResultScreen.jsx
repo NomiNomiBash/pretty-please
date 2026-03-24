@@ -279,24 +279,34 @@ export function ResultScreen({ result, occasion, steps, personalBest, onRestart 
               }}
             >
               <div style={{ color: "#9a8e83", fontSize: 11, marginBottom: 10, textAlign: "center", ...bitcount(400), textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                who confirmed
+                {win ? "who confirmed" : "who said yes"}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
                 {result.attendees.map((entry, i) => {
                   const { key, name, avatar } = attendeeParts(entry);
+                  const chipWin = {
+                    background: "#25D366",
+                    color: "#002a10",
+                    border: "1px solid #1db356",
+                    boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
+                  };
+                  const chipLoss = {
+                    background: "#F0F4F8",
+                    color: "#37474F",
+                    border: "1px solid #B0BEC5",
+                    boxShadow: "none",
+                  };
+                  const chip = win ? chipWin : chipLoss;
                   return (
                     <span
                       key={`${key}-${i}`}
                       className="mansalva"
                       style={{
-                        background: "#25D366",
-                        color: "#002a10",
+                        ...chip,
                         padding: "5px 12px",
                         borderRadius: 20,
                         fontSize: 13,
                         fontWeight: 700,
-                        border: "1px solid #1db356",
-                        boxShadow: "0 1px 0 rgba(0,0,0,0.06)",
                         display: "inline-flex",
                         alignItems: "center",
                         gap: 6,
@@ -339,7 +349,6 @@ export function ResultScreen({ result, occasion, steps, personalBest, onRestart 
         {/* Stats — same rhythm as intro stats row */}
         <div style={{ display: "flex", gap: 24, justifyContent: "center", marginBottom: 8, flexWrap: "wrap" }}>
           {[
-            { v: result.score, l: "score", color: win ? "#25D366" : "#E85D4C" },
             { v: steps, l: "steps", color: "#FFB830" },
             ...(personalBest !== null && !result.isNewBest
               ? [{ v: personalBest, l: "personal best", color: "#8696A0" }]

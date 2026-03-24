@@ -4,6 +4,7 @@ import { fetchPlaceSuggestions, sendTurn, postResult } from "../api/gameApi.js";
 import { buildCastForOccasion } from "../lib/proceduralCast.js";
 import { buildResult, resolveCommitmentsAtLockIn } from "../utils/scoring.js";
 import { assignSingleDmGhost, characterGhostingDm } from "../data/characters.js";
+import { attachCloseTies } from "../data/characterTies.js";
 import {
   STEPS_PER_WEEK,
   TOTAL_WEEKS,
@@ -49,14 +50,14 @@ function pickFlakeMsg(arr, name) {
 }
 
 const DM_SILENT_SYSTEM = [
-  (n) => `📵 ${n} has not opened this chat.`,
-  (n) => `📵 ${n} is online. Your message stays delivered.`,
-  (n) => `📵 You and ${n} are not having this conversation yet.`,
+  (n) => `📵 ${n} has not opened your DM. Delivered — nothing else.`,
+  (n) => `📵 ${n} left you on delivered. Blue ticks, zero drama.`,
+  (n) => `📵 Your DM to ${n} hit the void. Read receipts say no.`,
 ];
 const DM_SILENT_NARRATOR = [
-  "The DM was technically sent. Emotionally, it was not.",
-  "Some chats are one-player games.",
-  "Blue ticks: the museum piece of modern friendship.",
+  "Full ghost. Your DM is furniture now.",
+  "They saw the chat. They chose silence.",
+  "One blue tick energy. Two blue ticks fantasy.",
 ];
 
 function pickLine(arr) {
@@ -115,7 +116,8 @@ export function useGameState() {
     const raw =
       castFromApi?.map((c) => ({ ...c, commitment: "unknown", lastMsg: null })) ??
       buildCastForOccasion(occasion);
-    const cast = assignSingleDmGhost(raw, dateKey);
+    // Exactly one archetype per run ignores DMs until week threshold (see characters.js).
+    const cast = attachCloseTies(assignSingleDmGhost(raw, dateKey), dateKey, null);
     const names = cast.map((c) => c.name).join(", ");
     const firstSpeaker = cast.find((c) => c.id === "marcus") ?? cast[0];
 
@@ -257,11 +259,14 @@ export function useGameState() {
           {
             id: `dmignore${Date.now()}`,
             type: "system",
+            variant: "dmGhost",
+            ghostName: dmChar.name,
             text: pickLine(DM_SILENT_SYSTEM)(dmChar.name),
           },
         ]);
-        setNarrator(pickLine(DM_SILENT_NARRATOR));
+        setNarrator(`🚫 ${pickLine(DM_SILENT_NARRATOR)}`);
         advanceWeekAndApplyFlakes(newStep);
+        setMode("message");
         return;
       }
 
@@ -343,6 +348,7 @@ export function useGameState() {
       finalizeDisposableAction(mode, { setNudgeUsed, setDeadlineUsed, setMode });
 
       advanceWeekAndApplyFlakes(newStep);
+      setMode("message");
     } catch (e) {
       console.error(e);
       if (mode === "deadline") {

@@ -15,7 +15,42 @@ const BORDER_RECV     = "rgba(0,0,0,0.08)";
 export function ChatMsg({ msg }) {
 
   /* ── System message ── */
-  if (msg.type === "system")
+  if (msg.type === "system") {
+    if (msg.variant === "dmGhost") {
+      return (
+        <div style={{ margin: "12px 4px 14px" }} role="status">
+          <div style={{
+            maxWidth: 320,
+            margin: "0 auto",
+            background: "linear-gradient(180deg, #E8EAF6 0%, #E3E7F5 100%)",
+            border: "2px solid #7986CB",
+            borderRadius: 12,
+            padding: "12px 14px 14px",
+            boxShadow: "0 4px 14px rgba(63,81,181,0.18)",
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "#3949AB",
+              marginBottom: 6,
+            }}>
+              DM ghosted
+            </div>
+            <div style={{ fontSize: 22, lineHeight: 1, marginBottom: 8 }} aria-hidden>
+              ✓✓
+            </div>
+            <div style={{ color: "#283593", fontSize: 14, fontWeight: 600, lineHeight: 1.35, marginBottom: 4 }}>
+              {msg.ghostName ? `${msg.ghostName} isn’t replying.` : "No reply."}
+            </div>
+            <div style={{ color: "#5C6BC0", fontSize: 12.5, lineHeight: 1.45 }}>
+              {msg.text}
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div style={{ textAlign: "center", margin: "8px 0" }}>
         <span style={{
@@ -30,6 +65,7 @@ export function ChatMsg({ msg }) {
         </span>
       </div>
     );
+  }
 
   /* ── Typing indicator (three dots) ── */
   if (msg.type === "typing")

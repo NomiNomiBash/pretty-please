@@ -1,3 +1,5 @@
+import { attachCloseTies } from "../data/characterTies.js";
+
 function isNonEmptyString(x) {
   return typeof x === "string" && x.trim().length > 0;
 }
@@ -5,6 +7,7 @@ function isNonEmptyString(x) {
 /**
  * Validates and normalizes an authored daily edition (from JSON).
  * Optional per-character `linguisticFingerprint` overrides promptBuilder defaults.
+ * Optional `closeWith`: string[] of other character ids in this edition (1–2) overrides default inner-circle ties.
  */
 export function normalizeAuthoredEdition(raw, dateKey) {
   if (!raw || typeof raw !== "object") return null;
@@ -56,10 +59,12 @@ export function normalizeAuthoredEdition(raw, dateKey) {
     occasion.editionSettingLine = raw.settingLine.trim();
   }
 
+  const withTies = attachCloseTies(characters, dateKey, raw.characters);
+
   const out = {
     date: dateKey,
     occasion,
-    characters,
+    characters: withTies,
   };
   if (isNonEmptyString(raw.theme)) out.theme = raw.theme.trim();
   return out;

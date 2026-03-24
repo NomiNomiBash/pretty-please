@@ -110,6 +110,11 @@ export function GameView({
   const participantLine = chars.map((c) => c.name).join(", ");
   const hasPollDate = Array.isArray(pollDates) && pollDates.some(Boolean);
   const nudgeTargets = chars.filter((c) => ["ghost", "unknown", "seen"].includes(c.commitment));
+  const dmGhostRevealedNames = new Set(
+    msgs
+      .filter((m) => m.type === "system" && m.variant === "dmGhost" && m.ghostName)
+      .map((m) => m.ghostName)
+  );
 
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", background: WA_BG }}>
@@ -217,7 +222,14 @@ export function GameView({
             borderTop: "1px solid rgba(0,0,0,0.07)",
             padding: "5px 16px", textAlign: "center", flexShrink: 0,
           }}>
-            <span style={{ color: "#667781", fontSize: 11.5, fontStyle: "italic" }}>💬 {narrator}</span>
+            <span style={{
+              color: narrator.startsWith("🚫") ? "#3949AB" : "#667781",
+              fontSize: narrator.startsWith("🚫") ? 12.5 : 11.5,
+              fontStyle: "italic",
+              fontWeight: narrator.startsWith("🚫") ? 600 : 400,
+            }}>
+              {narrator.startsWith("🚫") ? narrator : `💬 ${narrator}`}
+            </span>
           </div>
         )}
 
@@ -354,7 +366,7 @@ export function GameView({
                 ))}
               </div>
             ) : mode === "dm" ? (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
                 <select
                   value={dmTarget}
                   onChange={(e) => onDmTargetChange(e.target.value)}
@@ -366,7 +378,10 @@ export function GameView({
                   }}
                 >
                   {chars.map((c) => (
-                    <option key={c.id} value={c.id}>{c.avatar} {c.name}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.avatar} {c.name}
+                      {dmGhostRevealedNames.has(c.name) ? " · wasn't on DMs (early)" : ""}
+                    </option>
                   ))}
                 </select>
                 <input

@@ -39,3 +39,26 @@ export function formatIsoDateLabel(isoDate) {
   if (Number.isNaN(d.getTime())) return "";
   return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
+
+function formatDateLong(d) {
+  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * Injected into the model system prompt so relative player phrases ("in four weeks")
+ * map to one consistent wall calendar instead of hallucinated day-of-month numbers.
+ */
+export function getCalendarAnchorBlock() {
+  const today = new Date();
+  const isoToday = toIsoDate(today);
+  const offsets = [7, 14, 21, 28];
+  const lines = offsets.map((days) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + days);
+    return `  • +${days} days → ${formatDateLong(d)}`;
+  });
+  return `Today (device local): ${formatDateLong(today)} (ISO ${isoToday})
+Approximate forward anchors (use these when the player is vague — stay consistent across characters in the same turn):
+${lines.join("\n")}
+If the player names an exact date, use that. Otherwise do not invent a random "the 14th" / conflicting weekdays — either pick ONE anchor from above that matches their intent or stay vague ("that weekend").`;
+}
