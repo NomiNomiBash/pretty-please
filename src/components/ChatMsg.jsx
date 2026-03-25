@@ -93,7 +93,10 @@ export function ChatMsg({ msg }) {
                 <span style={{ color: TEXT_MAIN, fontSize: 14, lineHeight: 1.45 }}>{msg.text}</span>
               </div>
               <div style={{ color: TEXT_MUTED, fontSize: 10, textAlign: "right", marginTop: 2, paddingRight: 2 }}>
-                {TIME} <span style={{ color: "#53BDEB" }}>✓✓</span>
+                {TIME} <svg width="17" height="11" viewBox="0 0 17 11" fill="none" style={{ display: "inline-block", verticalAlign: "-2px", marginLeft: 2 }}>
+                  <path d="M1 5.5 4 9.5 11.5 1" stroke="#53BDEB" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M5.5 5.5 8.5 9.5 16 1" stroke="#53BDEB" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
             </div>
           )}

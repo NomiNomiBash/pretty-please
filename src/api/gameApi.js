@@ -53,29 +53,41 @@ export async function sendTurn({
       sessionVarietyKey,
     });
   }
+  const body = {
+    occ,
+    chars,
+    mode,
+    dmTarget,
+    prompt,
+    dates,
+    weeksLeft,
+    totalWeeks,
+    turnStep,
+    sessionVarietyKey,
+  };
+
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await fetch("/api/turn", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          occ,
-          chars,
-          mode,
-          dmTarget,
-          prompt,
-          dates,
-          weeksLeft,
-          totalWeeks,
-          turnStep,
-          sessionVarietyKey,
-        }),
+        body: JSON.stringify(body),
       });
       if (res.ok) return await res.json();
-      if (attempt === 1) throw new Error(`turn endpoint failed: ${res.status}`);
+      const errJson = await res.json().catch(() => ({}));
+      const detail = errJson.error ? ` ${errJson.error}` : "";
+      const msg = `turn endpoint failed: ${res.status}${detail}`;
+      if (attempt === 1) throw new Error(msg);
       await new Promise((r) => setTimeout(r, 250));
     }
   } catch (apiErr) {
+    // Production has no VITE_ANTHROPIC_API_KEY — never fall back to browser Anthropic.
+    if (!import.meta.env.DEV) {
+      throw new Error(
+        apiErr?.message ||
+          "Turn failed. Check Vercel → Settings → ANTHROPIC_API_KEY and redeploy."
+      );
+    }
     try {
       return await fetchResponses({
         occ,

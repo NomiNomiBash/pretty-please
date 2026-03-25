@@ -70,7 +70,6 @@ export async function fetchResponses({
       }),
       messages: [{ role: "user", content: prompt }],
       temperature: 1,
-      top_p: 0.92,
     }),
   });
 

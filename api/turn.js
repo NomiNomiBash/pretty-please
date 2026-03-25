@@ -68,13 +68,25 @@ export default async function handler(req, res) {
         }),
         messages: [{ role: "user", content: prompt }],
         temperature: 1,
-        top_p: 0.92,
       }),
     });
 
-    const data = await upstream.json();
+    const data = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) {
+      const msg =
+        data.error?.message ||
+        (typeof data.error === "string" ? data.error : null) ||
+        upstream.statusText ||
+        "Anthropic request failed";
+      const status =
+        upstream.status >= 400 && upstream.status < 500 ? upstream.status : 502;
+      res.status(status).json({ error: msg });
+      return;
+    }
     if (!data.content?.[0]?.text) {
-      res.status(502).json({ error: data.error?.message || "Anthropic response malformed" });
+      res.status(502).json({
+        error: data.error?.message || "Anthropic response had no assistant text",
+      });
       return;
     }
 
